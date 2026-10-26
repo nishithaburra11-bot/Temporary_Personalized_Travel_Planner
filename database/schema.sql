@@ -600,3 +600,5 @@ SET region_name = 'Rural Kashi'
 WHERE region_name = 'Outer Varanasi and Countryside';
 
 UPDATE places SET closing_time='11:00:00 17:00:00' WHERE place_name='Tibetan Buddhist Temple';
+UPDATE places SET opening_time = '08:00:00', closing_time = '18:00:00', closed_days = NULL WHERE place_name='Sarnath Archaeological Ruins';
+UPDATE places SET opening_time = '08:30:00', closing_time = '17:00:00' WHERE place_name='Tibetan Buddhist Temple';

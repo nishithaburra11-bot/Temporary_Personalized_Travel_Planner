@@ -472,3 +472,129 @@ VALUES
     0.00,
     NULL
 );
+
+INSERT INTO places (
+    place_name,
+    region_name,
+    category,
+    speciality_description,
+    latitude,
+    longitude,
+    opening_time,
+    closing_time,
+    closed_days,
+    visit_duration_minutes,
+    entry_fee,
+    image_url
+)
+VALUES
+
+(
+    'Ramnagar Fort',
+    'Ramnagar and Eastern Riverbank',
+    'Historical',
+    'An 18th-century riverside fort of the Kashi Naresh, built in Mughal style with sandstone and overlooking the Ganges.',
+    25.268600,
+    83.027500,
+    '10:00:00',
+    '17:00:00',
+    NULL,
+    90,
+    20.00,
+    'ramnagar_fort.jpeg'
+),
+
+(
+    'Ramnagar Fort Museum',
+    'Ramnagar and Eastern Riverbank',
+    'Historical',
+    'A museum inside the fort displaying vintage cars, royal costumes, weapons, palanquins and antique clocks of the Banaras royal family.',
+    25.268800,
+    83.027200,
+    '10:00:00',
+    '17:00:00',
+    NULL,
+    75,
+    20.00,
+    'ramnagar_museum.jpeg'
+),
+
+(
+    'Ramnagar Riverfront',
+    'Ramnagar and Eastern Riverbank',
+    'Cultural & Leisure',
+    'A quiet stretch of the Ganges bank beside the fort, good for a calm walk and views across the river to the Varanasi ghats.',
+    25.269500,
+    83.025000,
+    NULL,
+    NULL,
+    NULL,
+    45,
+    0.00,
+    'ramnagar_riverfront.jpeg'
+),
+
+(
+    'Ganga Viewpoints on the Eastern Bank',
+    'Ramnagar and Eastern Riverbank',
+    'Cultural & Leisure',
+    'The sandy eastern bank opposite the main ghats, offering a wide view of the Varanasi skyline, especially at sunrise and sunset.',
+    25.306000,
+    83.019000,
+    NULL,
+    NULL,
+    NULL,
+    60,
+    0.00,
+    'ganga_viewpoint.jpeg'
+),
+
+
+(
+    'Kardameshwar Mahadev Temple',
+    'Outer Varanasi and Countryside',
+    'Spiritual',
+    'An ancient Shiva temple in Kandwa village, known for its old stone architecture and a peaceful setting beside a pond.',
+    25.367700,
+    82.960800,
+    '05:00:00',
+    '20:00:00',
+    NULL,
+    60,
+    0.00,
+    'kardameshwar.jpeg'
+),
+
+(
+    'Rural Temple Circuits',
+    'Outer Varanasi and Countryside',
+    'Spiritual',
+    'A route through village temples and shrines around Varanasi, linked to the traditional Panchkosi pilgrimage.',
+    25.367700,
+    82.960800,
+    NULL,
+    NULL,
+    NULL,
+    120,
+    0.00,
+    'rural_temples.jpeg'
+),
+
+(
+    'Village Walks and Countryside Experiences',
+    'Outer Varanasi and Countryside',
+    'Cultural & Leisure',
+    'Guided walks through farmland and villages, with a look at rural life, local crafts and village food.',
+    25.367700,
+    82.960800,
+    NULL,
+    NULL,
+    NULL,
+    150,
+    0.00,
+    'village_walk.jpeg'
+);
+
+UPDATE places
+SET region_name = 'Rural Kashi'
+WHERE region_name = 'Outer Varanasi and Countryside';

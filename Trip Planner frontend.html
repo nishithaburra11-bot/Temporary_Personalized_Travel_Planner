@@ -1,0 +1,280 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Trip Planner Layout</title>
+<style>
+/* Layout: single-column form stacked above a results shell (map + day cards),
+   stacking is natural at phone width since everything is already one column */
+:root{
+  --bg:#f6f4ef;
+  --surface:#ffffff;
+  --border:#ddd7c9;
+  --ink:#241f18;
+  --muted:#75705f;
+  --accent:#2f6b4f;
+  --accent-ink:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#191812;
+    --surface:#231f18;
+    --border:#39342a;
+    --ink:#f1ede2;
+    --muted:#a39d89;
+    --accent:#6fbf96;
+    --accent-ink:#15291f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#191812;
+  --surface:#231f18;
+  --border:#39342a;
+  --ink:#f1ede2;
+  --muted:#a39d89;
+  --accent:#6fbf96;
+  --accent-ink:#15291f;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Inter","Source Sans 3",system-ui,-apple-system,sans-serif;
+  padding-inline:16px;
+  padding-block:32px;
+  max-width:760px;
+  margin-inline:auto;
+}
+h1,h2,h3{font-family:"Fraunces","Source Serif 4",Georgia,serif;font-weight:600;text-wrap:balance}
+h1{font-size:1.8rem;margin:0 0 4px}
+.subtitle{color:var(--muted);font-size:0.95rem;margin:0 0 28px}
+h2{font-size:1.05rem;margin:0 0 14px;letter-spacing:0.01em}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+  margin-bottom:20px;
+}
+
+.field-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:14px;
+}
+@media (max-width:480px){
+  .field-row{grid-template-columns:1fr}
+}
+
+label{
+  display:block;
+  font-size:0.78rem;
+  color:var(--muted);
+  margin-bottom:6px;
+  letter-spacing:0.02em;
+  text-transform:uppercase;
+}
+
+input[type="text"],
+input[type="number"],
+select{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--bg);
+  color:var(--ink);
+  font-size:0.95rem;
+  font-family:inherit;
+}
+input::placeholder{color:var(--muted);opacity:0.7}
+input:focus,select:focus{
+  outline:2px solid var(--accent);
+  outline-offset:1px;
+}
+
+.places-list{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  max-height:220px;
+  overflow-y:auto;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:6px;
+}
+.place-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 8px;
+  border-radius:6px;
+  font-size:0.92rem;
+}
+.place-item:hover{background:var(--bg)}
+.place-item input{width:auto;accent-color:var(--accent)}
+.place-meta{color:var(--muted);font-size:0.8rem;margin-left:auto}
+
+.submit-btn{
+  width:100%;
+  padding:13px;
+  border:none;
+  border-radius:8px;
+  background:var(--accent);
+  color:var(--accent-ink);
+  font-size:0.98rem;
+  font-weight:600;
+  font-family:inherit;
+  cursor:pointer;
+  margin-top:6px;
+}
+.submit-btn:hover{opacity:0.92}
+
+.map-box{
+  height:260px;
+  border:1px dashed var(--border);
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-size:0.95rem;
+  letter-spacing:0.03em;
+  background:
+    repeating-linear-gradient(45deg, transparent, transparent 10px, var(--bg) 10px, var(--bg) 20px);
+}
+
+.results-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+@media (max-width:480px){
+  .results-grid{grid-template-columns:1fr}
+}
+.day-card{
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px;
+  min-width:0;
+}
+.day-card h3{font-size:0.95rem;margin:0 0 8px;font-family:"Inter",system-ui,sans-serif;font-weight:600}
+.day-card ul{margin:0;padding-left:18px;color:var(--muted);font-size:0.88rem;line-height:1.7}
+
+.section-gap{margin-top:28px}
+</style>
+
+<h1>Plan Your Trip</h1>
+<p class="subtitle">Enter your trip details and select the places you'd like to visit.</p>
+
+<div class="card">
+  <h2>Trip Details</h2>
+  <div class="field-row">
+    <div>
+      <label for="start">Start Location</label>
+      <input type="text" id="start" name="start" placeholder="e.g. Varanasi">
+    </div>
+    <div>
+      <label for="end">End Location</label>
+      <input type="text" id="end" name="end" placeholder="e.g. Varanasi">
+    </div>
+  </div>
+  <div class="field-row">
+    <div>
+      <label for="radius">Search Radius (km)</label>
+      <input type="number" id="radius" name="radius" placeholder="e.g. 50" min="0">
+    </div>
+    <div>
+      <label for="days">Duration (days)</label>
+      <input type="number" id="days" name="days" placeholder="e.g. 4" min="1">
+    </div>
+  </div>
+  <div class="field-row">
+    <div>
+      <label for="budget">Budget (₹)</label>
+      <input type="number" id="budget" name="budget" placeholder="e.g. 15000" min="0">
+    </div>
+    <div>
+      <label for="pace">Travel Pace</label>
+      <select id="pace" name="pace">
+        <option value="">Select pace</option>
+        <option value="relaxed">Relaxed</option>
+        <option value="moderate">Moderate</option>
+        <option value="packed">Packed</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Select Places to Visit</h2>
+  <div class="places-list">
+    <label class="place-item"><input type="checkbox" name="places" value=""><span></span></label>
+    <label class="place-item"><input type="checkbox" name="places" value=""><span></span></label>
+    <label class="place-item"><input type="checkbox" name="places" value=""><span></span></label>
+    <label class="place-item"><input type="checkbox" name="places" value=""><span></span></label>
+    <label class="place-item"><input type="checkbox" name="places" value=""><span></span></label>
+    <label class="place-item"><input type="checkbox" name="places" value=""><span></span></label>
+  </div>
+</div>
+
+<button class="submit-btn" type="button">Generate Itinerary</button>
+
+<div class="section-gap">
+  <div class="card">
+    <h2>Day-wise Itinerary</h2>
+    <div class="results-grid">
+      <div class="day-card">
+        <h3>Day 1</h3>
+        <ul><li></li><li></li></ul>
+      </div>
+      <div class="day-card">
+        <h3>Day 2</h3>
+        <ul><li></li><li></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Excluded Places</h2>
+    <div class="results-grid">
+      <div class="day-card">
+        <h3></h3>
+        <ul><li>Reason: </li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Permissions &amp; Bookings</h2>
+    <div class="results-grid">
+      <div class="day-card">
+        <h3></h3>
+        <ul><li>Process/Link: </li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Accommodation &amp; Food Suggestions</h2>
+    <div class="results-grid">
+      <div class="day-card">
+        <h3>Stay</h3>
+        <ul><li></li></ul>
+      </div>
+      <div class="day-card">
+        <h3>Food</h3>
+        <ul><li></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Route Map</h2>
+    <div class="map-box">MAP</div>
+  </div>
+</div>
+
+</body></html>

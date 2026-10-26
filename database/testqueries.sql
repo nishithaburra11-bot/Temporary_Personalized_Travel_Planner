@@ -1,2 +1,3 @@
 SELECT * FROM places;
-SELECT place_name,category,speciality_description FROM places WHERE region_name='Sarnath and Northern Varanasi';
+SELECT closing_time FROM places WHERE place_name='Tibetan Buddhist Temple';
+SELECT place_name,opening_time,closing_time FROM places;

@@ -598,3 +598,5 @@ VALUES
 UPDATE places
 SET region_name = 'Rural Kashi'
 WHERE region_name = 'Outer Varanasi and Countryside';
+
+UPDATE places SET closing_time='11:00:00 17:00:00' WHERE place_name='Tibetan Buddhist Temple';

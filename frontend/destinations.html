@@ -17,7 +17,6 @@
 
         main.dest-container {
             max-width: 1400px !important;
-            /* 1000 nunchi 1400 ki */
             width: 100%;
             margin: 20px auto;
             padding: 0 30px;
@@ -32,7 +31,7 @@
         #destInfo {
             display: grid;
             grid-template-columns: 1fr 1.1fr;
-            /* images ki konchem ekkuva space */
+            /* left text, right images */
             gap: 40px;
             align-items: start;
         }
@@ -48,12 +47,13 @@
         }
 
         .text-section h3 {
-            color: #B45F06;
             margin: 0 0 8px;
+            color: #B45F06;
         }
 
         .text-section p {
-            margin: 0;
+            margin: 0 0 16px;
+            /* paras madhya gap */
             line-height: 1.6;
             font-size: 16px;
             text-align: left;
@@ -72,6 +72,21 @@
             height: auto;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .next-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 12px 28px;
+            background: #B45F06;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .next-btn:hover {
+            background: #7A3E00;
         }
 
         @media (max-width: 800px) {
@@ -93,7 +108,7 @@
         </a>
         <nav id="menu"></nav>
     </header>
-    <nav id="menu"></nav>
+
     <main class="dest-container">
         <select id="destSelect">
             <option value="">-- Select a destination --</option>
@@ -103,8 +118,10 @@
         <section id="destInfo" class="hidden">
             <div class="text-section">
                 <h2 id="destName"></h2>
-                <p id="destHistory"></p>
+                <div id="destHistory"></div>
+                <a id="nextBtn" href="regions.html" class="next-btn">Explore Regions &rarr;</a>
             </div>
+
             <div class="image-section">
                 <img id="destImg" alt="">
                 <img id="destImg2" alt="">

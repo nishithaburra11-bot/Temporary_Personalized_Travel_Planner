@@ -1,22 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayan | Your Compass to the Perfect Trip</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ayan | Regions</title>
+<link rel="stylesheet" href="style.css">
+<script src="script.js" defer></script>
+<style>
+  :root{
+    --nav:#f0d06c; --ink:#3a2a12; --brown:#6b3a06; --gold:#c8922a; --green:#2f8f3f;
+    --card:#fffdf6; --line:#e3d6ae;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:Georgia,"Times New Roman",serif; color:var(--ink); min-height:100vh;
+    /* regions background: soft sage-sand, like land seen on a map */
+    background:linear-gradient(160deg,#eef0d6 0%,#f4edcf 55%,#f7e6bd 100%);
+  }
+ 
+  /* ---------- layout ---------- */
+  main{display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:1300px;margin:0 auto;padding:32px 40px 60px;align-items:start}
+  h1{font-size:2rem;color:var(--brown);margin-bottom:6px}
+  .sub{margin-bottom:20px;line-height:1.5}
+ 
+  select{
+    width:100%;padding:13px 14px;font:inherit;font-size:1.05rem;color:var(--ink);
+    background:var(--card);border:2px solid var(--gold);border-radius:10px;cursor:pointer;
+  }
+  select:focus{outline:3px solid #f0d06c}
+ 
+  .region-head{margin:26px 0 14px}
+  .region-head h2{color:var(--brown);font-size:1.4rem}
+  .region-head p{margin-top:4px;color:#5a4a30}
+  .places{display:grid;gap:12px}
+  .place{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--gold);border-radius:10px;padding:14px 16px;box-shadow:0 2px 6px rgba(107,58,6,.08)}
+  .place{display:flex;gap:14px;align-items:flex-start}
+  .place img{width:96px;height:80px;object-fit:cover;border-radius:8px;flex:none}
+  .place h3{font-size:1.05rem}
+  .cat-title{margin:24px 0 10px;color:var(--brown);font-size:1.15rem;border-bottom:2px solid var(--line);padding-bottom:4px}
+  .cat-title span{font-weight:400;font-size:.9rem;color:#7a6a4a}
+  .place p{margin-top:6px;font-size:.95rem;line-height:1.45}
+  .empty{margin-top:26px;padding:22px;border:2px dashed var(--line);border-radius:12px;text-align:center;color:#7a6a4a}
+  .go{display:inline-block;margin-top:20px;background:var(--brown);color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px}
+ 
+  /* ---------- map half (placeholder for your guiding map) ---------- */
+  #map{
+    position:sticky;top:20px;height:calc(100vh - 120px);min-height:420px;
+    background:rgba(255,253,246,.55);border:2px dashed var(--gold);border-radius:14px;
+    display:flex;align-items:center;justify-content:center;text-align:center;color:#7a6a4a;padding:20px
+  }
+  @media(max-width:860px){
+    main{grid-template-columns:1fr;padding:20px}
+    #map{position:static;height:320px;order:-1}
+  }
+</style>
 </head>
-
 <body>
-    <header id="topbar">
-        <a href="index.html" class="logo">
-            <img src="ayan_main.svg" alt="Ayan">
-        </a>
-        <nav id="menu"></nav>
-    </header>
+ 
+<header id="topbar">
+    <a href="index.html" class="logo">
+        <img src="ayan_main.svg" alt="Ayan">
+    </a>
     <nav id="menu"></nav>
+</header>
+ 
+<main>
+  <!-- LEFT HALF: region dropdown + places -->
+  <section>
+    <h1>Explore the Regions</h1>
+    <p class="sub">Pick a region to see the places worth visiting there.</p>
+ 
+    <select id="regionSelect" aria-label="Select a region">
+      <option value="">-- Select a region --</option>
+    </select>
+ 
+    <div id="output"><div class="empty">Choose a region above to see its places.</div></div>
+  </section>
+ 
+  <!-- RIGHT HALF: your guiding map goes here -->
+  <aside id="map">Guiding map goes here</aside>
+</main>
+ 
+<script>
+const API = "http://127.0.0.1:5000";      // Flask backend (python app.py)
+const IMG_BASE = "images/";                // folder holding kvt.jpeg, assi.jpeg ... (change if different)
+ 
+const select = document.getElementById("regionSelect");
+const out = document.getElementById("output");
+let regions = [];
+ 
+function esc(s){return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+const titleCase = s => s.toLowerCase().replace(/(^|[\s&])\w/g, m => m.toUpperCase());
+const msg = t => out.innerHTML = `<div class="empty">${t}</div>`;
+ 
+async function getJSON(path){
+  const res = await fetch(API + path);
+  const data = await res.json();
+  if(!res.ok || data.success === false) throw new Error(data.error || res.status);
+  return data;
+}
+ 
+async function loadRegions(){
+  try{
+    regions = (await getJSON("/api/regions")).regions;
+    regions.forEach(r => {
+      const o = document.createElement("option");
+      o.value = r.region_id; o.textContent = r.region_name;
+      select.appendChild(o);
+    });
+    const saved = sessionStorage.getItem("region");
+    if(saved && regions.some(r => String(r.region_id) === saved)){ select.value = saved; loadPlaces(saved); }
+  }catch(e){ console.error(e); msg("Could not load regions. Is the backend running?"); }
+}
+ 
+async function loadPlaces(regionId){
+  if(!regionId){ msg("Choose a region above to see its places."); return; }
+  try{ sessionStorage.setItem("region", regionId); }catch(e){}
+  msg("Loading places...");
+  try{
+    const places = (await getJSON("/api/places?region_id=" + regionId)).places;
+    const region = regions.find(r => String(r.region_id) === String(regionId));
+    renderByCategory(region, places);
+    document.dispatchEvent(new CustomEvent("regionchange",{detail:{id:regionId,region,places}})); // hook for your map
+  }catch(e){ console.error(e); msg("Could not load places. Try again."); }
+}
+ 
+function renderByCategory(region, places){
+  const head = `<div class="region-head"><h2>${esc(region?.region_name)}</h2></div>`;
+  if(!places.length){ out.innerHTML = head + '<div class="empty">No places added for this region yet.</div>'; return; }
+ 
+  // group by category (case-insensitive, so "Spiritual" and "spiritual" merge)
+  const groups = {};
+  places.forEach(p => {
+    const key = (p.category || "Other").trim().toLowerCase();
+    (groups[key] ||= []).push(p);
+  });
+ 
+  out.innerHTML = head + Object.entries(groups).map(([cat, list]) => `
+    <h3 class="cat-title">${esc(titleCase(cat))} <span>(${list.length})</span></h3>
+    <div class="places">${list.map(p => `
+      <article class="place">
+        ${p.image_url ? `<img src="${IMG_BASE}${encodeURIComponent(p.image_url)}" alt="" onerror="this.remove()">` : ""}
+        <div>
+          <h3>${esc(p.place_name)}</h3>
+          <p>${esc(p.speciality_description || p.description || "")}</p>
+        </div>
+      </article>`).join("")}
+    </div>`).join("") + '<a class="go" href="places.html">Explore Places \u2192</a>';
+}
+ 
+select.addEventListener("change", e => loadPlaces(e.target.value));
+loadRegions();
+</script>
 </body>
-
 </html>
+ 

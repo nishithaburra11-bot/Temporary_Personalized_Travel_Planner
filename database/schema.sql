@@ -294,7 +294,6 @@ INSERT INTO places (
 )
 VALUES
 
--- 1. Dhamek Stupa
 (
     'Dhamek Stupa',
     'Sarnath and Northern Varanasi',
@@ -310,7 +309,6 @@ VALUES
     NULL
 ),
 
--- 2. Sarnath Archaeological Museum
 (
     'Sarnath Archaeological Museum',
     'Sarnath and Northern Varanasi',
@@ -326,7 +324,6 @@ VALUES
     NULL
 ),
 
--- 3. Chaukhandi Stupa
 (
     'Chaukhandi Stupa',
     'Sarnath and Northern Varanasi',
@@ -334,15 +331,14 @@ VALUES
     'Historic Buddhist monument traditionally associated with Buddha meeting his first disciples.',
     25.3740700,
     83.0236600,
+    '06:00:00',
+    '18:00:00',
     NULL,
-    NULL,
-    NULL,
-    30,
-    NULL,
+    50,
+    20.00,
     NULL
 ),
 
--- 4. Mulagandha Kuti Vihara
 (
     'Mulagandha Kuti Vihara',
     'Sarnath and Northern Varanasi',
@@ -350,31 +346,29 @@ VALUES
     'Buddhist temple established by the Maha Bodhi Society, known for its murals depicting events from Buddha’s life.',
     25.3814210,
     83.0230270,
-    NULL,
-    NULL,
+    '08:00:00 13:30:00',
+    '11:30:00 17:30:00',
     NULL,
     45,
     0.00,
     NULL
 ),
 
--- 5. Sarnath Deer Park
 (
     'Sarnath Deer Park',
     'Sarnath and Northern Varanasi',
     'Nature',
     'Green surroundings associated with the historical deer park where Buddha delivered his first sermon.',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    25.38138,
+    83.026669,
+    '08:00:00',
+    '17:30:00',
     NULL,
     45,
-    NULL,
+    40.00,
     NULL
 ),
 
--- 6. Sarnath Archaeological Ruins
 (
     'Sarnath Archaeological Ruins',
     'Sarnath and Northern Varanasi',
@@ -383,14 +377,13 @@ VALUES
     25.3809000,
     83.0245100,
     NULL,
-    NULL,
-    NULL,
+    '08:00:00',
+    '18:00:00',
     60,
-    NULL,
+    250.00,
     NULL
 ),
 
--- 7. Thai Temple and Monastery
 (
     'Thai Temple and Monastery',
     'Sarnath and Northern Varanasi',
@@ -402,86 +395,80 @@ VALUES
     NULL,
     NULL,
     30,
-    NULL,
+    0.00,
     NULL
 ),
 
--- 8. Giant Buddha Statue
 (
     'Giant Buddha Statue',
     'Sarnath and Northern Varanasi',
     'Spiritual',
     'An approximately 80-foot standing statue of Buddha located within the Thai temple complex.',
-    NULL,
-    NULL,
+    25.377749,
+    83.0213,
     NULL,
     NULL,
     NULL,
     30,
-    NULL,
+    0.00,
     NULL
 ),
 
--- 9. Chinese Buddhist Temple
 (
     'Chinese Buddhist Temple',
     'Sarnath and Northern Varanasi',
     'Spiritual',
     'Buddhist temple representing Chinese Buddhist traditions and architectural influences.',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    25.379603,
+    83.028297,
+    '08:00:00',
+    '18:00:00',
     NULL,
     30,
-    NULL,
+    0.00,
     NULL
 ),
 
--- 10. Tibetan Buddhist Temple
 (
     'Tibetan Buddhist Temple',
     'Sarnath and Northern Varanasi',
     'Spiritual',
     'Buddhist religious site reflecting Tibetan Buddhist traditions and practices.',
+    25.377020,
+    83.026952,
+    '08:30:00 14:30:00',
+    '11:50:00 05:00:00',
     NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    30,
-    NULL,
+    50,
+    0.00,
     NULL
 ),
 
--- 11. Jain Temple, Sarnath
 (
     'Jain Temple, Sarnath',
     'Sarnath and Northern Varanasi',
     'Spiritual',
     'Jain religious site associated with Shreyansnath, the eleventh Jain Tirthankara.',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    25.371673,
+    83.02512,
+    '08:00:00',
+    '18:00:00',
     NULL,
     30,
-    NULL,
+    0.00,
     NULL
 ),
-
--- 12. Garden of Spiritual Wisdom
 (
     'Garden of Spiritual Wisdom',
     'Sarnath and Northern Varanasi',
     'Nature',
     'A landscaped garden featuring greenery, educational exhibits, and plants associated with traditional wellness.',
+    25.373848,
+    83.022426,
+    '07:00:00',
+    '17:30:00',
     NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    30,
-    NULL,
+    60,
+    0.00,
     NULL
 );

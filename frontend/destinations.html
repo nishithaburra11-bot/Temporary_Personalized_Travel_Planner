@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayan | Your Compass to the Perfect Trip</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+    <style>
+        body {
+            background-color: #FFF8E7;
+            color: #3B2A1A;
+            font-family: Georgia, serif;
+            margin: 0;
+        }
+
+        main.dest-container {
+            max-width: 1400px !important;
+            /* 1000 nunchi 1400 ki */
+            width: 100%;
+            margin: 20px auto;
+            padding: 0 30px;
+            box-sizing: border-box;
+        }
+
+        #destSelect {
+            display: block;
+            margin: 0 auto 25px;
+        }
+
+        #destInfo {
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            /* images ki konchem ekkuva space */
+            gap: 40px;
+            align-items: start;
+        }
+
+        #destInfo.hidden {
+            display: none;
+        }
+
+        .text-section h2 {
+            margin: 0 0 12px;
+            font-size: 32px;
+            color: #7A3E00;
+        }
+
+        .text-section h3 {
+            color: #B45F06;
+            margin: 0 0 8px;
+        }
+
+        .text-section p {
+            margin: 0;
+            line-height: 1.6;
+            font-size: 16px;
+            text-align: left;
+        }
+
+        .image-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .image-section img {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 800px) {
+            #destInfo {
+                grid-template-columns: 1fr;
+            }
+
+            .image-section {
+                position: static;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header id="topbar">
+        <a href="index.html" class="logo">
+            <img src="ayan_main.svg" alt="Ayan">
+        </a>
+        <nav id="menu"></nav>
+    </header>
+    <nav id="menu"></nav>
+    <main class="dest-container">
+        <select id="destSelect">
+            <option value="">-- Select a destination --</option>
+            <option value="varanasi">Varanasi</option>
+        </select>
+
+        <section id="destInfo" class="hidden">
+            <div class="text-section">
+                <h2 id="destName"></h2>
+                <p id="destHistory"></p>
+            </div>
+            <div class="image-section">
+                <img id="destImg" alt="">
+                <img id="destImg2" alt="">
+            </div>
+        </section>
+    </main>
+
+    <script src="destinations.js"></script>
+</body>
+
+</html>

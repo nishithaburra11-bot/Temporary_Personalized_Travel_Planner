@@ -267,7 +267,19 @@
             out.innerHTML = html;
         }
 
-        select.addEventListener("change", () => loadPlaces(select.value));
+        select.addEventListener("change", () => {
+            if (select.value) {
+                localStorage.setItem("selectedRegion", select.value);
+                localStorage.setItem("selectedRegionName", REGIONS[select.value]);
+            }
+            loadPlaces(select.value);
+        });
+
+        const savedRegion = localStorage.getItem("selectedRegion");
+        if (savedRegion && REGIONS[savedRegion]) {
+            select.value = savedRegion;
+            loadPlaces(savedRegion);
+        }
     </script>
 
 </body>

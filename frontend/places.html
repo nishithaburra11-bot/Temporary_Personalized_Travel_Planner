@@ -42,6 +42,7 @@
 
         h1 { font-size: 2rem; color: var(--brown); margin-bottom: 6px; }
         .sub { color: #5a4a30; font-size: 1.05rem; }
+        .sub a { color: var(--brown); text-decoration: underline; margin-left: 8px; font-size: 0.95rem; }
 
         .counter-badge {
             background: #fff;
@@ -56,7 +57,7 @@
             display: flex;
             gap: 12px;
             margin-bottom: 24px;
-            flex-wrap: wrap;
+            align-items: center;
         }
 
         .filter-select {
@@ -186,6 +187,7 @@
             background: var(--card);
             border-radius: 10px;
             border: 2px dashed var(--line);
+            grid-column: 1 / -1;
         }
     </style>
 </head>
@@ -202,15 +204,12 @@
         <div class="header-section">
             <div>
                 <h1>Select Places to Visit</h1>
-                <p class="sub">Choose the attractions you want to explore during your trip to Varanasi.</p>
+                <p id="subHeading" class="sub">Choose the attractions you want to explore during your trip.</p>
             </div>
             <div class="counter-badge" id="countBadge">Selected: 0 places</div>
         </div>
 
         <div class="filter-bar">
-            <select id="regionFilter" class="filter-select">
-                <option value="">All Regions</option>
-            </select>
             <select id="categoryFilter" class="filter-select">
                 <option value="">All Categories</option>
             </select>
@@ -231,6 +230,14 @@
         let allPlaces = [];
         let selectedIds = new Set();
 
+        const selectedRegion = localStorage.getItem("selectedRegion") || "";
+        const selectedRegionName = localStorage.getItem("selectedRegionName") || "";
+
+        const subHeading = document.getElementById("subHeading");
+        if (selectedRegionName) {
+            subHeading.innerHTML = `Showing attractions in <strong>${selectedRegionName}</strong> <a href="regions.html">(Change Region)</a>`;
+        }
+
         // Restore saved selections
         try {
             const saved = JSON.parse(localStorage.getItem("selected_places") || "[]");
@@ -240,7 +247,6 @@
         const grid = document.getElementById("placesGrid");
         const badge = document.getElementById("countBadge");
         const nextBtn = document.getElementById("nextBtn");
-        const regionFilter = document.getElementById("regionFilter");
         const categoryFilter = document.getElementById("categoryFilter");
 
         function updateUI() {
@@ -252,17 +258,15 @@
         }
 
         function renderPlaces() {
-            const reg = regionFilter.value;
             const cat = categoryFilter.value;
 
             const filtered = allPlaces.filter(p => {
-                if (reg && p.region_name !== reg) return false;
                 if (cat && p.category !== cat) return false;
                 return true;
             });
 
             if (filtered.length === 0) {
-                grid.innerHTML = '<div class="empty-msg">No places found matching the filters.</div>';
+                grid.innerHTML = '<div class="empty-msg">No places found matching this category.</div>';
                 return;
             }
 
@@ -285,7 +289,7 @@
                 `;
             }).join("");
 
-            // Add click listeners to cards and checkboxes
+            // Click listeners
             grid.querySelectorAll(".place-card").forEach(card => {
                 const id = Number(card.getAttribute("data-id"));
                 const cb = card.querySelector("input[type='checkbox']");
@@ -308,19 +312,17 @@
 
         async function loadPlaces() {
             try {
-                const res = await fetch(`${API}/api/places`);
+                const url = selectedRegion ?
+                    `${API}/api/places?region_id=${encodeURIComponent(selectedRegion)}` :
+                    `${API}/api/places`;
+                const res = await fetch(url);
                 if (!res.ok) throw new Error("Status " + res.status);
                 const data = await res.json();
                 allPlaces = data.places || [];
 
-                // Populate filter options
-                const regions = Array.from(new Set(allPlaces.map(p => p.region_name).filter(Boolean))).sort();
+                // Categories for filter
                 const categories = Array.from(new Set(allPlaces.map(p => p.category).filter(Boolean))).sort();
-
-                regions.forEach(r => regionFilter.add(new Option(r, r)));
                 categories.forEach(c => categoryFilter.add(new Option(c, c)));
-
-                regionFilter.addEventListener("change", renderPlaces);
                 categoryFilter.addEventListener("change", renderPlaces);
 
                 renderPlaces();

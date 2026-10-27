@@ -27,7 +27,7 @@ except ImportError:
     CORS = None
 
 import database as db
-import itinerary as planner_module            # Member 4's module: ALL scheduling logic lives there
+import itinerary_logic as planner_module            # Member 4's module: ALL scheduling logic lives there
 
 app = Flask(__name__)
 if CORS:

@@ -1,4 +1,4 @@
-"""Varanasi Smart Trip Planner - Flask backend (MySQL + the team's itinerary.py).
+"""Varanasi Smart Trip Planner - Flask backend (MySQL + the team's itenary_logic.py).
 
 Run (from this folder, venv active):
     pip install -r requirements.txt
@@ -14,7 +14,6 @@ Endpoints
   POST /api/trip/recalculate              FULL regeneration ({trip_id, add_compulsory|compulsory_places} or a full payload)
   GET  /api/resources?place_ids=1,2
 """
-import inspect
 import json
 import re
 from datetime import timedelta
@@ -27,7 +26,7 @@ except ImportError:
     CORS = None
 
 import database as db
-import itenary_logic as planner_module            # Member 4's module: ALL scheduling logic lives there
+import itenary_logic as planner_module        # Member 4's module (itenary_logic.py): ALL scheduling logic lives there
 
 app = Flask(__name__)
 if CORS:
@@ -239,15 +238,10 @@ def resolve_location(value):
 
 # ------------------------------------------------------------ planning
 def _call_planner(trip, places):
-    """Call itinerary.generate_itinerary with only the keyword arguments it actually supports."""
-    fn = planner_module.generate_itinerary
-    wanted = {"use_osrm": True, "include_geometry": True}
-    sig = inspect.signature(fn).parameters
-    kwargs = {k: v for k, v in wanted.items() if k in sig or any(
-        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.values())}
+    """Call generate_itinerary(trip, places, use_osrm, include_geometry) from itenary_logic.py."""
     try:
-        return fn(trip, places, **kwargs)
-    except ValueError as exc:                      # planner's own validation messages
+        return planner_module.generate_itinerary(trip, places, use_osrm=True, include_geometry=True)
+    except ValueError as exc:                      # planner's own validation messages -> HTTP 400
         raise ApiError(str(exc), 400)
 
 
@@ -322,9 +316,7 @@ def plan_trip(params):
             "hotel_per_night": hotel_per_night, "travel_time_factor": params["travel_time_factor"],
             "selected_places": ids, "compulsory_places": params["compulsory_ids"]}
     if params["start_date"]:
-        trip["start_date"] = params["start_date"]
-    else:
-        warnings.append("No start_date given: closed-day rules cannot be checked.")
+        trip["start_date"] = params["start_date"]      # (planner warns by itself if it is missing)
 
     result = _call_planner(trip, clean)
     response = dict(result)                         # pass the planner's own keys through untouched

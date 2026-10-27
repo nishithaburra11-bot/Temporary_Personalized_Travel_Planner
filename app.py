@@ -27,7 +27,7 @@ except ImportError:
     CORS = None
 
 import database as db
-import itinerary_logic as planner_module            # Member 4's module: ALL scheduling logic lives there
+import itenary_logic as planner_module            # Member 4's module: ALL scheduling logic lives there
 
 app = Flask(__name__)
 if CORS:
@@ -127,7 +127,7 @@ def normalize_place_row(row):
     if cd:
         tokens = [t.strip().lower() for t in cd.replace(";", ",").split(",") if t.strip()]
         if all(t[:3] in DAY_PREFIXES for t in tokens):
-            r["closed_days"] = cd
+            r["closed_days"] = ", ".join(tokens)
         else:
             issues.append(f"{name}: closed_days={cd!r} is not a list of weekdays - ignored.")
             r["closed_days"] = None

@@ -15,18 +15,19 @@ Endpoints
   GET  /api/resources?place_ids=1,2
 """
 import json
+import os
 import re
 from datetime import timedelta
 
 import requests
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 try:
     from flask_cors import CORS
 except ImportError:
     CORS = None
 
 import database as db
-import itinerary_logic as planner_module        # Member 4's module (itenary_logic.py): ALL scheduling logic lives there
+import itinenary_logic as planner_module        # Member 4's module (itenary_logic.py): ALL scheduling logic lives there
 
 app = Flask(__name__)
 if CORS:
@@ -362,9 +363,27 @@ def regions():
     return jsonify({"success": True, "regions": rows})
 
 
+REGION_SLUGS = {
+    "bhu-south": "BHU and Southern Varanasi",
+    "old-city": "Old City and Central Ghats",
+    "sarnath-north": "Sarnath and Northern Varanasi",
+    "ramnagar-east": "Ramnagar and Eastern Riverbank",
+    "rural-kashi": "Rural Kashi",
+    "chandauli": "Chandauli region",
+    "mirzapur-chunar": "Mirzapur and Chunar Region",
+    "kaimoor": "Kaimoor region"
+}
+IMAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "images", "places")
+
+
 @app.get("/api/places")
 def places():
     names = [n for n in request.args.getlist("region") if n.strip()]
+    for rid in request.args.getlist("region_id"):
+        for sub in rid.split(","):
+            sub = sub.strip()
+            if sub:
+                names.append(REGION_SLUGS.get(sub, sub))
     sql, args = "SELECT * FROM places", []
     if names:
         sql += f" WHERE region_name IN ({','.join(['%s'] * len(names))})"
@@ -373,6 +392,11 @@ def places():
     for r in rows:                                   # attach per-place data problems for the UI
         r["data_issues"] = normalize_place_row(r)[1]
     return jsonify({"success": True, "places": rows})
+
+
+@app.get("/api/images/places/<path:filename>")
+def place_image(filename):
+    return send_from_directory(IMAGES_DIR, filename)
 
 
 @app.get("/api/data-quality")

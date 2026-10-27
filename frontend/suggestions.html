@@ -4,9 +4,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayan | Your Compass to the Perfect Trip</title>
+    <title>Ayan | Trip Suggestions & Resources</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+    <style>
+        :root {
+            --ink: #3a2a12;
+            --brown: #6b3a06;
+            --gold: #c8922a;
+            --card: #fffdf6;
+            --line: #e3d6ae;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            min-height: 100vh;
+            background: linear-gradient(160deg, #eef0d6 0%, #f4edcf 55%, #f7e6bd 100%);
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 32px 24px 60px;
+        }
+
+        h1 { font-size: 2rem; color: var(--brown); margin-bottom: 6px; }
+        .sub { color: #5a4a30; font-size: 1.05rem; margin-bottom: 28px; }
+
+        .section-title {
+            font-size: 1.35rem;
+            color: var(--brown);
+            margin: 30px 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid var(--line);
+            padding-bottom: 8px;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 5px solid var(--gold);
+            border-radius: 10px;
+            padding: 16px 18px;
+            box-shadow: 0 2px 6px rgba(107, 58, 6, .06);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            color: var(--brown);
+            margin-bottom: 6px;
+        }
+
+        .card-tag {
+            display: inline-block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #f6e7b8;
+            color: var(--brown);
+            padding: 2px 8px;
+            border-radius: 99px;
+            margin-bottom: 10px;
+            align-self: flex-start;
+        }
+
+        .card p {
+            font-size: 0.9rem;
+            color: #4a3a20;
+            line-height: 1.45;
+            margin-bottom: 10px;
+        }
+
+        .card-footer {
+            font-size: 0.84rem;
+            color: #6a5a3a;
+            border-top: 1px dashed var(--line);
+            padding-top: 8px;
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .action-link {
+            color: #B45F06;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .action-link:hover {
+            text-decoration: underline;
+        }
+
+        .empty-placeholder {
+            background: var(--card);
+            border: 2px dashed var(--line);
+            border-radius: 10px;
+            padding: 24px;
+            text-align: center;
+            color: #7a6a4a;
+            font-size: 0.95rem;
+        }
+
+        .bottom-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 24px;
+            border-top: 2px solid var(--line);
+            margin-top: 40px;
+        }
+
+        .back-btn {
+            color: var(--brown);
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .next-btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #B45F06;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .next-btn:hover { background: #7A3E00; }
+    </style>
 </head>
 
 <body>
@@ -16,7 +160,102 @@
         </a>
         <nav id="menu"></nav>
     </header>
-    <nav id="menu"></nav>
+
+    <main>
+        <h1>Suggestions & Travel Resources</h1>
+        <p class="sub">Handpicked accommodations, authentic local eateries, and key entry protocols for your planned visit.</p>
+
+        <!-- Hotels -->
+        <h2 class="section-title">🏨 Recommended Stays</h2>
+        <div id="hotelsGrid" class="cards-grid">
+            <div class="empty-placeholder">No specific accommodation requested or none within database range.</div>
+        </div>
+
+        <!-- Food -->
+        <h2 class="section-title">🍽️ Food & Dining Near Your Stops</h2>
+        <div id="foodGrid" class="cards-grid">
+            <div class="empty-placeholder">No local dining recommendations recorded yet.</div>
+        </div>
+
+        <!-- Travel Resources -->
+        <h2 class="section-title">📜 Travel Protocols & Guidelines</h2>
+        <div id="resourcesGrid" class="cards-grid">
+            <div class="empty-placeholder">No special permits or registrations required for these attractions.</div>
+        </div>
+
+        <div class="bottom-actions">
+            <a href="plan.html" class="back-btn">&larr; Back to Itinerary</a>
+            <button onclick="window.print()" class="next-btn" style="background: #2f8f3f;">Print / Save Plan</button>
+            <a href="destinations.html" class="next-btn">Plan Another Trip &rarr;</a>
+        </div>
+    </main>
+
+    <script>
+        let tripData = {};
+        try {
+            tripData = JSON.parse(localStorage.getItem("trip_result") || "{}");
+        } catch (e) {}
+
+        const hotelsGrid = document.getElementById("hotelsGrid");
+        const foodGrid = document.getElementById("foodGrid");
+        const resGrid = document.getElementById("resourcesGrid");
+
+        // 1. Hotels
+        const hotels = tripData.hotel_suggestions || [];
+        if (hotels.length > 0) {
+            hotelsGrid.innerHTML = hotels.map(h => `
+                <div class="card">
+                    <div>
+                        <span class="card-tag">${h.category || 'Hotel'}</span>
+                        <h3>${h.hotel_name || h.name || 'Hotel'}</h3>
+                        <p>${h.address || 'Central Varanasi'}</p>
+                        ${h.facilities ? `<p><strong>Amenities:</strong> ${h.facilities}</p>` : ''}
+                    </div>
+                    <div class="card-footer">
+                        <span>${h.price_per_night ? '₹' + h.price_per_night + '/night' : 'Contact for rates'}</span>
+                        ${h.official_booking_url ? `<a href="${h.official_booking_url}" target="_blank" class="action-link">Book &rarr;</a>` : ''}
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // 2. Food
+        const foods = tripData.food_suggestions || [];
+        if (foods.length > 0) {
+            foodGrid.innerHTML = foods.map(f => `
+                <div class="card">
+                    <div>
+                        <span class="card-tag">${f.cuisine || 'Local Specialties'}</span>
+                        <h3>${f.name || 'Eatery'}</h3>
+                        <p>${f.address || 'Near Varanasi Ghats'}</p>
+                        ${f.dietary_options ? `<p><strong>Options:</strong> ${f.dietary_options}</p>` : ''}
+                    </div>
+                    <div class="card-footer">
+                        <span>${f.price_range_per_person ? '₹' + f.price_range_per_person + '/person' : 'Affordable'}</span>
+                        <span>${f.opening_hours || 'Open Daily'}</span>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // 3. Resources
+        const resources = tripData.resources || [];
+        if (resources.length > 0) {
+            resGrid.innerHTML = resources.map(r => `
+                <div class="card" style="border-left-color: #2563eb;">
+                    <div>
+                        <span class="card-tag" style="background: #dbeafe; color: #1e40af;">${r.requirement_type || 'Guidelines'}</span>
+                        <h3>${r.place_name || 'Attraction Protocol'}</h3>
+                        <p>${r.procedure_text || 'Standard visitor regulations apply.'}</p>
+                    </div>
+                    <div class="card-footer">
+                        <span>${r.required_or_optional ? r.required_or_optional.toUpperCase() : 'INFO'}</span>
+                        ${r.official_url ? `<a href="${r.official_url}" target="_blank" class="action-link">Official Portal &rarr;</a>` : ''}
+                    </div>
+                </div>
+            `).join("");
+        }
+    </script>
 </body>
 
 </html>

@@ -1,12 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayan | Your Compass to the Perfect Trip</title>
+    <title>Ayan | Generated Itinerary</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+    <style>
+        :root {
+            --ink: #3a2a12;
+            --brown: #6b3a06;
+            --gold: #c8922a;
+            --card: #fffdf6;
+            --line: #e3d6ae;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            min-height: 100vh;
+            background: linear-gradient(160deg, #eef0d6 0%, #f4edcf 55%, #f7e6bd 100%);
+        }
+
+        main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 32px 24px 60px;
+        }
+
+        h1 { font-size: 2rem; color: var(--brown); margin-bottom: 6px; }
+        .sub { color: #5a4a30; font-size: 1.05rem; margin-bottom: 24px; }
+
+        .summary-card {
+            background: var(--card);
+            border: 2px solid var(--gold);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(107, 58, 6, .08);
+        }
+
+        .summary-stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #7a6a4a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-val {
+            font-size: 1.4rem;
+            color: var(--brown);
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .alert-box {
+            background: #fffbeb;
+            border-left: 5px solid #f59e0b;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-size: 0.92rem;
+            color: #78350f;
+            line-height: 1.5;
+        }
+
+        .alert-box ul {
+            margin-top: 6px;
+            padding-left: 20px;
+        }
+
+        .day-block {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(107, 58, 6, .06);
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            border-bottom: 2px solid var(--line);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .day-title {
+            font-size: 1.3rem;
+            color: var(--brown);
+            font-weight: bold;
+        }
+
+        .day-meta {
+            font-size: 0.9rem;
+            color: #7a6a4a;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 28px;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 8px;
+            top: 10px;
+            bottom: 10px;
+            width: 2px;
+            background: var(--gold);
+        }
+
+        .stop-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .stop-item::before {
+            content: "";
+            position: absolute;
+            left: -24px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #B45F06;
+            border: 2px solid #fff;
+        }
+
+        .stop-time {
+            font-size: 0.88rem;
+            font-weight: bold;
+            color: #d97706;
+            margin-bottom: 2px;
+        }
+
+        .stop-name {
+            font-size: 1.1rem;
+            color: var(--brown);
+            font-weight: 600;
+        }
+
+        .stop-details {
+            font-size: 0.88rem;
+            color: #5a4a30;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .travel-leg {
+            font-size: 0.82rem;
+            color: #7a6a4a;
+            background: #fdf6e2;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            margin: 6px 0 10px -10px;
+        }
+
+        .excluded-card {
+            background: #fff8f8;
+            border-left: 5px solid #ef4444;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-size: 0.92rem;
+        }
+
+        .excluded-card h3 {
+            color: #991b1b;
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+        }
+
+        .bottom-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 2px solid var(--line);
+        }
+
+        .back-btn {
+            color: var(--brown);
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .next-btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #B45F06;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .next-btn:hover { background: #7A3E00; }
+
+        .spinner-container {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--brown);
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #f4edcf;
+            border-top: 5px solid var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
+
 <body>
     <header id="topbar">
         <a href="index.html" class="logo">
@@ -14,6 +246,215 @@
         </a>
         <nav id="menu"></nav>
     </header>
-    <nav id="menu"></nav>
+
+    <main id="mainContainer">
+        <div id="loading" class="spinner-container">
+            <div class="spinner"></div>
+            <h2>Calculating Optimal Varanasi Itinerary...</h2>
+            <p>Evaluating opening hours, travel distances, and budget constraints.</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+                <div>
+                    <h1>Your Personalized Itinerary</h1>
+                    <p class="sub">Optimized for minimal travel time and smooth scheduling across Varanasi.</p>
+                </div>
+                <button id="recalcBtn" class="next-btn" style="background: #6b3a06; font-size: 0.9rem; padding: 8px 16px;">Recalculate</button>
+            </div>
+
+            <!-- Stats -->
+            <div class="summary-card" id="summaryCard"></div>
+
+            <!-- Warnings/Notes -->
+            <div id="warningsBox" class="alert-box" style="display: none;"></div>
+
+            <!-- Daily Itinerary -->
+            <div id="daysList"></div>
+
+            <!-- Excluded Places -->
+            <div id="excludedBox" class="excluded-card" style="display: none;"></div>
+
+            <div class="bottom-actions">
+                <a href="customize.html" class="back-btn">&larr; Back to Customize</a>
+                <a href="suggestions.html" class="next-btn">View Hotel & Food Suggestions &rarr;</a>
+            </div>
+        </div>
+
+        <div id="errorState" style="display: none;" class="alert-box">
+            <h2 style="color: #991b1b; margin-bottom: 8px;">Itinerary Generation Failed</h2>
+            <p id="errorMsg"></p>
+            <div style="margin-top: 16px;">
+                <a href="preferences.html" class="next-btn" style="padding: 8px 18px; font-size: 0.95rem;">Adjust Preferences &rarr;</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API = "http://127.0.0.1:5000";
+
+        async function generatePlan() {
+            const loading = document.getElementById("loading");
+            const content = document.getElementById("content");
+            const errBox = document.getElementById("errorState");
+            const errMsg = document.getElementById("errorMsg");
+
+            loading.style.display = "block";
+            content.style.display = "none";
+            errBox.style.display = "none";
+
+            let selectedIds = [];
+            let compulsoryIds = [];
+            let prefs = {};
+
+            try {
+                selectedIds = JSON.parse(localStorage.getItem("selected_places") || "[]").map(Number);
+                compulsoryIds = JSON.parse(localStorage.getItem("compulsory_places") || "[]").map(Number);
+                prefs = JSON.parse(localStorage.getItem("trip_preferences") || "{}");
+            } catch (e) {}
+
+            if (selectedIds.length === 0) {
+                loading.style.display = "none";
+                errBox.style.display = "block";
+                errMsg.textContent = "No places were selected. Please select at least one attraction first.";
+                return;
+            }
+
+            const payload = {
+                days: prefs.days || 2,
+                hours_per_day: prefs.hours_per_day || 8,
+                budget: prefs.budget !== undefined ? prefs.budget : 10000,
+                travelers: prefs.travelers || 1,
+                transport: prefs.transport || "own_vehicle",
+                travel_pace: prefs.travel_pace || "normal",
+                food_preference: prefs.food_preference || "any",
+                stay_preference: prefs.stay_preference || "none",
+                start: prefs.start || "Varanasi Junction Railway Station",
+                end: prefs.end || "Varanasi Junction Railway Station",
+                start_time: prefs.start_time || "09:00",
+                start_date: prefs.start_date || null,
+                selected_places: selectedIds,
+                compulsory_places: compulsoryIds
+            };
+
+            try {
+                const res = await fetch(`${API}/api/trip`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (!res.ok || data.success === false) {
+                    throw new Error(data.error || (data.details ? data.details.join(", ") : "Failed to plan trip"));
+                }
+
+                localStorage.setItem("trip_result", JSON.stringify(data));
+                renderResult(data);
+                loading.style.display = "none";
+                content.style.display = "block";
+            } catch (err) {
+                console.error(err);
+                loading.style.display = "none";
+                errBox.style.display = "block";
+                errMsg.textContent = err.message || "An unexpected error occurred.";
+            }
+        }
+
+        function renderResult(data) {
+            const summary = document.getElementById("summaryCard");
+            const warningsBox = document.getElementById("warningsBox");
+            const daysList = document.getElementById("daysList");
+            const excludedBox = document.getElementById("excludedBox");
+
+            // 1. Stats
+            const totalStops = (data.itinerary_by_day || []).reduce((acc, d) => acc + (d.stops || []).length, 0);
+            const estCost = data.budget_breakdown ? data.budget_breakdown.total_estimated_cost : (data.cost_summary ? data.cost_summary.total : 0);
+            const totalKm = data.route_summary ? data.route_summary.total_km : 0;
+
+            summary.innerHTML = `
+                <div class="summary-stat">
+                    <span class="stat-label">Total Duration</span>
+                    <span class="stat-val">${data.itinerary_by_day ? data.itinerary_by_day.length : 0} Days</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-label">Scheduled Stops</span>
+                    <span class="stat-val">${totalStops} Attractions</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-label">Estimated Spend</span>
+                    <span class="stat-val">₹${Math.round(estCost || 0)}</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-label">Total Distance</span>
+                    <span class="stat-val">${totalKm ? totalKm + " km" : "Optimized"}</span>
+                </div>
+            `;
+
+            // 2. Warnings
+            if (data.warnings && data.warnings.length > 0) {
+                warningsBox.style.display = "block";
+                warningsBox.innerHTML = `<strong>⚠️ Trip Notices & Advisories:</strong><ul>` +
+                    data.warnings.map(w => `<li>${w}</li>`).join("") + `</ul>`;
+            } else {
+                warningsBox.style.display = "none";
+            }
+
+            // 3. Days
+            if (!data.itinerary_by_day || data.itinerary_by_day.length === 0) {
+                daysList.innerHTML = `<div class="day-block">No stops could be scheduled within your given time/budget constraints.</div>`;
+            } else {
+                daysList.innerHTML = data.itinerary_by_day.map(d => {
+                    const stops = d.stops || [];
+                    const stopsHtml = stops.map((s, idx) => {
+                        const travelMin = s.travel_duration_minutes || s.travel_minutes;
+                        const legHtml = (idx > 0 && travelMin) ?
+                            `<div class="travel-leg">🚗 Travel: ~${Math.round(travelMin)} mins</div>` : "";
+                        const cost = s.estimated_cost !== undefined ? ` • 🏷 ₹${s.estimated_cost}` : "";
+                        return `
+                            ${legHtml}
+                            <div class="stop-item">
+                                <div class="stop-time">${s.arrival_time || s.arrive || ''} - ${s.departure_time || s.leave || ''}</div>
+                                <div class="stop-name">${s.place_name || s.name || 'Attraction'}</div>
+                                <div class="stop-details">
+                                    ⏱ Stay: ${s.visit_duration_minutes || s.duration_minutes || 45} mins${cost}
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+
+                    return `
+                        <div class="day-block">
+                            <div class="day-header">
+                                <span class="day-title">Day ${d.day || d.day_number || 1} ${d.date ? '(' + d.date + ')' : ''}</span>
+                                <span class="day-meta">${stops.length} Stops • Daily Travel: ~${Math.round(d.travel_km || 0)} km</span>
+                            </div>
+                            <div class="timeline">
+                                ${stopsHtml || '<p>No stops scheduled for this day.</p>'}
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            }
+
+            // 4. Excluded
+            if (data.excluded_places && data.excluded_places.length > 0) {
+                excludedBox.style.display = "block";
+                excludedBox.innerHTML = `<h3>Unscheduled Places (${data.excluded_places.length})</h3>` +
+                    `<ul>` + data.excluded_places.map(ex => {
+                        const name = ex.place_name || ex.name || (`Place #${ex.place_id || ex.id}`);
+                        const reason = ex.reason || "Time / budget limit exceeded";
+                        return `<li><strong>${name}:</strong> ${reason}</li>`;
+                    }).join("") + `</ul>`;
+            } else {
+                excludedBox.style.display = "none";
+            }
+        }
+
+        document.getElementById("recalcBtn").addEventListener("click", generatePlan);
+
+        generatePlan();
+    </script>
 </body>
+
 </html>

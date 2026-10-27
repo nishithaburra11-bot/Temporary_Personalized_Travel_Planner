@@ -1,12 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayan | Your Compass to the Perfect Trip</title>
+    <title>Ayan | Trip Preferences</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+    <style>
+        :root {
+            --ink: #3a2a12;
+            --brown: #6b3a06;
+            --gold: #c8922a;
+            --card: #fffdf6;
+            --line: #e3d6ae;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            min-height: 100vh;
+            background: linear-gradient(160deg, #eef0d6 0%, #f4edcf 55%, #f7e6bd 100%);
+        }
+
+        main {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 32px 24px 60px;
+        }
+
+        h1 { font-size: 2rem; color: var(--brown); margin-bottom: 6px; }
+        .sub { color: #5a4a30; font-size: 1.05rem; margin-bottom: 24px; }
+
+        .form-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(107, 58, 6, .07);
+        }
+
+        .form-card h2 {
+            font-size: 1.25rem;
+            color: var(--brown);
+            margin-bottom: 16px;
+            border-bottom: 1px dashed var(--line);
+            padding-bottom: 8px;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        @media (max-width: 650px) {
+            .field-grid { grid-template-columns: 1fr; }
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--brown);
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="time"],
+        input[type="date"],
+        select {
+            padding: 10px 14px;
+            font: inherit;
+            font-size: 0.95rem;
+            border: 1.5px solid var(--gold);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--ink);
+        }
+
+        input:focus, select:focus {
+            outline: 2px solid var(--gold);
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: #7a6a4a;
+        }
+
+        .bottom-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+        }
+
+        .back-btn {
+            color: var(--brown);
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .next-btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #B45F06;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .next-btn:hover { background: #7A3E00; }
+    </style>
 </head>
+
 <body>
     <header id="topbar">
         <a href="index.html" class="logo">
@@ -14,6 +133,165 @@
         </a>
         <nav id="menu"></nav>
     </header>
-    <nav id="menu"></nav>
+
+    <main>
+        <h1>Set Trip Preferences</h1>
+        <p class="sub">Tell us about your schedule, travel pace, and budget to generate a tailored itinerary.</p>
+
+        <form id="prefForm">
+            <!-- Schedule & Route -->
+            <div class="form-card">
+                <h2>1. Schedule & Endpoints</h2>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="days">Number of Days *</label>
+                        <input type="number" id="days" min="1" max="14" value="2" required>
+                        <span class="help-text">Duration of your visit (1 to 14 days)</span>
+                    </div>
+
+                    <div class="field">
+                        <label for="hoursPerDay">Hours Available Per Day *</label>
+                        <input type="number" id="hoursPerDay" min="1" max="16" step="0.5" value="8" required>
+                        <span class="help-text">Sightseeing hours per day (e.g. 8 hours)</span>
+                    </div>
+
+                    <div class="field">
+                        <label for="startLoc">Starting Point *</label>
+                        <input type="text" id="startLoc" value="Varanasi Junction Railway Station" required>
+                        <span class="help-text">Hotel, station, or landmark</span>
+                    </div>
+
+                    <div class="field">
+                        <label for="endLoc">Ending Point *</label>
+                        <input type="text" id="endLoc" value="Varanasi Junction Railway Station" required>
+                        <span class="help-text">Where each day concludes</span>
+                    </div>
+
+                    <div class="field">
+                        <label for="startTime">Daily Start Time</label>
+                        <input type="time" id="startTime" value="09:00">
+                    </div>
+
+                    <div class="field">
+                        <label for="startDate">Trip Start Date (Optional)</label>
+                        <input type="date" id="startDate">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget & Logistics -->
+            <div class="form-card">
+                <h2>2. Budget & Logistics</h2>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="budget">Total Budget (₹) *</label>
+                        <input type="number" id="budget" min="0" step="500" value="10000" required>
+                        <span class="help-text">Maximum spend for tickets, travel, food, stay</span>
+                    </div>
+
+                    <div class="field">
+                        <label for="travelers">Number of Travelers</label>
+                        <input type="number" id="travelers" min="1" max="50" value="1" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="transport">Transport Mode</label>
+                        <select id="transport">
+                            <option value="own_vehicle" selected>Own Vehicle / Cab (Road)</option>
+                            <option value="mixed">Mixed (Cab & Walking)</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="pace">Sightseeing Pace</label>
+                        <select id="pace">
+                            <option value="relaxed">Relaxed (more leisure, 20m breaks)</option>
+                            <option value="normal" selected>Normal (balanced, 10m breaks)</option>
+                            <option value="fast">Fast (cover maximum places, 5m breaks)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hospitality Preferences -->
+            <div class="form-card">
+                <h2>3. Hospitality & Food</h2>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="foodPref">Food Preference</label>
+                        <select id="foodPref">
+                            <option value="any" selected>Any / Local Food</option>
+                            <option value="vegetarian">Vegetarian</option>
+                            <option value="vegan">Vegan</option>
+                            <option value="jain">Jain</option>
+                            <option value="non_vegetarian">Non-Vegetarian</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="stayPref">Accommodation Preference</label>
+                        <select id="stayPref">
+                            <option value="none" selected>No Accommodation needed</option>
+                            <option value="budget">Budget Stay</option>
+                            <option value="normal">Standard / 3-Star</option>
+                            <option value="luxury">Luxury / 5-Star</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-actions">
+                <a href="places.html" class="back-btn">&larr; Back to Places</a>
+                <button type="submit" class="next-btn">Proceed to Customize &rarr;</button>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        const form = document.getElementById("prefForm");
+
+        // Restore existing preferences if already entered
+        try {
+            const saved = JSON.parse(localStorage.getItem("trip_preferences") || "{}");
+            if (saved.days) document.getElementById("days").value = saved.days;
+            if (saved.hours_per_day) document.getElementById("hoursPerDay").value = saved.hours_per_day;
+            if (saved.start) document.getElementById("startLoc").value = saved.start;
+            if (saved.end) document.getElementById("endLoc").value = saved.end;
+            if (saved.start_time) document.getElementById("startTime").value = saved.start_time;
+            if (saved.start_date) document.getElementById("startDate").value = saved.start_date;
+            if (saved.budget !== undefined) document.getElementById("budget").value = saved.budget;
+            if (saved.travelers) document.getElementById("travelers").value = saved.travelers;
+            if (saved.transport) document.getElementById("transport").value = saved.transport;
+            if (saved.travel_pace) document.getElementById("pace").value = saved.travel_pace;
+            if (saved.food_preference) document.getElementById("foodPref").value = saved.food_preference;
+            if (saved.stay_preference) document.getElementById("stayPref").value = saved.stay_preference;
+        } catch (e) {}
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+
+            const prefs = {
+                days: parseInt(document.getElementById("days").value, 10),
+                hours_per_day: parseFloat(document.getElementById("hoursPerDay").value),
+                start: document.getElementById("startLoc").value.trim(),
+                end: document.getElementById("endLoc").value.trim(),
+                start_time: document.getElementById("startTime").value || "09:00",
+                start_date: document.getElementById("startDate").value || null,
+                budget: parseFloat(document.getElementById("budget").value),
+                travelers: parseInt(document.getElementById("travelers").value, 10),
+                transport: document.getElementById("transport").value,
+                travel_pace: document.getElementById("pace").value,
+                food_preference: document.getElementById("foodPref").value,
+                stay_preference: document.getElementById("stayPref").value,
+            };
+
+            try {
+                localStorage.setItem("trip_preferences", JSON.stringify(prefs));
+            } catch (err) {}
+
+            location.href = "customize.html";
+        });
+    </script>
 </body>
+
 </html>

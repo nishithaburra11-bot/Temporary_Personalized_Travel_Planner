@@ -1,12 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayan | Your Compass to the Perfect Trip</title>
+    <title>Ayan | Customize Places</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+    <style>
+        :root {
+            --ink: #3a2a12;
+            --brown: #6b3a06;
+            --gold: #c8922a;
+            --card: #fffdf6;
+            --line: #e3d6ae;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            min-height: 100vh;
+            background: linear-gradient(160deg, #eef0d6 0%, #f4edcf 55%, #f7e6bd 100%);
+        }
+
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 32px 24px 60px;
+        }
+
+        h1 { font-size: 2rem; color: var(--brown); margin-bottom: 6px; }
+        .sub { color: #5a4a30; font-size: 1.05rem; margin-bottom: 24px; line-height: 1.4; }
+
+        .info-box {
+            background: #fffbe6;
+            border-left: 4px solid var(--gold);
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+            color: #5c4510;
+        }
+
+        .list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .item-row {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(107, 58, 6, .06);
+            transition: all 0.2s;
+        }
+
+        .item-row.compulsory {
+            border-left: 6px solid #d97706;
+            background: #fffcf0;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-size: 1.1rem;
+            color: var(--brown);
+            font-weight: 600;
+        }
+
+        .item-meta {
+            font-size: 0.85rem;
+            color: #7a6a4a;
+            margin-top: 4px;
+        }
+
+        .item-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .compulsory-btn {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1.5px solid var(--gold);
+            background: #fff;
+            color: var(--brown);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+        }
+
+        .compulsory-btn.active {
+            background: #d97706;
+            color: #fff;
+            border-color: #b45309;
+            font-weight: bold;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #b91c1c;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 6px;
+        }
+
+        .remove-btn:hover {
+            color: #7f1d1d;
+        }
+
+        .bottom-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 2px solid var(--line);
+        }
+
+        .back-btn {
+            color: var(--brown);
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .next-btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #B45F06;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .next-btn:hover { background: #7A3E00; }
+        .next-btn:disabled { background: #b0a090; cursor: not-allowed; }
+
+        .empty-msg {
+            text-align: center;
+            padding: 40px;
+            color: #7a6a4a;
+            font-size: 1.1rem;
+            background: var(--card);
+            border-radius: 10px;
+            border: 2px dashed var(--line);
+        }
+    </style>
 </head>
+
 <body>
     <header id="topbar">
         <a href="index.html" class="logo">
@@ -14,6 +171,130 @@
         </a>
         <nav id="menu"></nav>
     </header>
-    <nav id="menu"></nav>
+
+    <main>
+        <h1>Customize Your Itinerary Stops</h1>
+        <p class="sub">Mark your must-visit places as <strong>Compulsory</strong>. Our smart optimizer guarantees priority inclusion for these stops while arranging the best route.</p>
+
+        <div class="info-box">
+            ⭐ <strong>Tip:</strong> Places marked as "Compulsory" are scheduled first within your available days and opening hours.
+        </div>
+
+        <div id="listContainer" class="list-container">
+            <div class="empty-msg">Loading selected attractions...</div>
+        </div>
+
+        <div class="bottom-actions">
+            <a href="preferences.html" class="back-btn">&larr; Back to Preferences</a>
+            <button id="planBtn" class="next-btn">Generate My Itinerary &rarr;</button>
+        </div>
+    </main>
+
+    <script>
+        const API = "http://127.0.0.1:5000";
+        let selectedIds = [];
+        let compulsorySet = new Set();
+        let placesData = [];
+
+        try {
+            selectedIds = JSON.parse(localStorage.getItem("selected_places") || "[]").map(Number);
+            const savedComp = JSON.parse(localStorage.getItem("compulsory_places") || "[]");
+            if (Array.isArray(savedComp)) savedComp.forEach(id => compulsorySet.add(Number(id)));
+        } catch (e) {}
+
+        const container = document.getElementById("listContainer");
+        const planBtn = document.getElementById("planBtn");
+
+        function updateStorage() {
+            try {
+                localStorage.setItem("selected_places", JSON.stringify(selectedIds));
+                localStorage.setItem("compulsory_places", JSON.stringify(Array.from(compulsorySet)));
+            } catch (e) {}
+            planBtn.disabled = selectedIds.length === 0;
+        }
+
+        function renderList() {
+            if (selectedIds.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-msg">
+                        No places are currently selected. <br><br>
+                        <a href="places.html" style="color: var(--brown); font-weight: bold;">&larr; Go back to choose places</a>
+                    </div>
+                `;
+                updateStorage();
+                return;
+            }
+
+            const lookup = new Map(placesData.map(p => [Number(p.place_id), p]));
+
+            container.innerHTML = selectedIds.map(id => {
+                const p = lookup.get(id) || { place_name: `Place #${id}`, category: "Attraction", region_name: "" };
+                const isComp = compulsorySet.has(id);
+                return `
+                    <div class="item-row ${isComp ? 'compulsory' : ''}" data-id="${id}">
+                        <div class="item-info">
+                            <div class="item-name">${p.place_name}</div>
+                            <div class="item-meta">${p.region_name || 'Varanasi'} • ${p.category || 'Sight'}</div>
+                        </div>
+                        <div class="item-actions">
+                            <button type="button" class="compulsory-btn ${isComp ? 'active' : ''}" data-id="${id}">
+                                ${isComp ? '★ Compulsory' : '☆ Make Compulsory'}
+                            </button>
+                            <button type="button" class="remove-btn" data-id="${id}" title="Remove place">&times;</button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            // Compulsory toggle listeners
+            container.querySelectorAll(".compulsory-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const id = Number(btn.getAttribute("data-id"));
+                    if (compulsorySet.has(id)) {
+                        compulsorySet.delete(id);
+                    } else {
+                        compulsorySet.add(id);
+                    }
+                    updateStorage();
+                    renderList();
+                });
+            });
+
+            // Remove listeners
+            container.querySelectorAll(".remove-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const id = Number(btn.getAttribute("data-id"));
+                    selectedIds = selectedIds.filter(x => x !== id);
+                    compulsorySet.delete(id);
+                    updateStorage();
+                    renderList();
+                });
+            });
+
+            updateStorage();
+        }
+
+        async function init() {
+            try {
+                const res = await fetch(`${API}/api/places`);
+                if (res.ok) {
+                    const data = await res.json();
+                    placesData = data.places || [];
+                }
+            } catch (err) {
+                console.warn("Could not fetch place details:", err);
+            }
+            renderList();
+        }
+
+        planBtn.addEventListener("click", () => {
+            if (selectedIds.length > 0) {
+                location.href = "plan.html";
+            }
+        });
+
+        init();
+    </script>
 </body>
+
 </html>

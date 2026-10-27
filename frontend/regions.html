@@ -120,6 +120,19 @@
             main { grid-template-columns: 1fr; padding: 20px; }
             #map { position: static; height: 320px; order: -1; }
         }
+        .next-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 28px;
+            background: #B45F06;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .next-btn:hover {
+            background: #7A3E00;
+        }
     </style>
 </head>
 
@@ -145,6 +158,9 @@
 
             <div id="output">
                 <div class="empty">Choose a region above to see its places.</div>
+            </div>
+            <div style="margin-top: 20px;">
+                <a href="places.html" class="next-btn">Proceed to Select Places &rarr;</a>
             </div>
         </section>
 

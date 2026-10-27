@@ -93,8 +93,8 @@ VALUES
 ),
 (
     'Assi Ghat',
+    'BHU and Southern Varanasi',
     'cultural & leisure',
-    'Ghat',
     'Popular riverside destination for sunrise views, boat rides and Ganga Aarti.',
     25.289460, 83.006090,
     'Assi Ghat, Varanasi, Uttar Pradesh',

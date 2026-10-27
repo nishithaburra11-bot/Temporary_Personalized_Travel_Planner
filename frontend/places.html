@@ -4,9 +4,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayan | Your Compass to the Perfect Trip</title>
+    <title>Ayan | Choose Places</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+    <style>
+        :root {
+            --ink: #3a2a12;
+            --brown: #6b3a06;
+            --gold: #c8922a;
+            --card: #fffdf6;
+            --line: #e3d6ae;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            min-height: 100vh;
+            background: linear-gradient(160deg, #eef0d6 0%, #f4edcf 55%, #f7e6bd 100%);
+        }
+
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 30px 60px;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        h1 { font-size: 2rem; color: var(--brown); margin-bottom: 6px; }
+        .sub { color: #5a4a30; font-size: 1.05rem; }
+
+        .counter-badge {
+            background: #fff;
+            border: 2px solid var(--gold);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: var(--brown);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 10px 14px;
+            font: inherit;
+            border-radius: 8px;
+            border: 1.5px solid var(--gold);
+            background: var(--card);
+            color: var(--ink);
+        }
+
+        .places-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+
+        .place-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 5px solid var(--gold);
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 2px 6px rgba(107, 58, 6, .08);
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .place-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(107, 58, 6, .14);
+        }
+
+        .place-card.selected {
+            border-left-color: #2f8f3f;
+            background: #fcfff8;
+        }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .card-top input[type="checkbox"] {
+            margin-top: 4px;
+            width: 18px;
+            height: 18px;
+            accent-color: #2f8f3f;
+            cursor: pointer;
+        }
+
+        .place-title {
+            font-size: 1.1rem;
+            color: var(--brown);
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .place-desc {
+            font-size: 0.92rem;
+            color: #4a3a20;
+            line-height: 1.45;
+            margin-bottom: 12px;
+            flex: 1;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82rem;
+            color: #6a5a3a;
+            border-top: 1px dashed var(--line);
+            padding-top: 8px;
+        }
+
+        .tag {
+            font-size: .72rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            background: #f6e7b8;
+            color: var(--brown);
+            padding: 2px 8px;
+            border-radius: 99px;
+        }
+
+        .bottom-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-top: 2px solid var(--line);
+        }
+
+        .back-btn {
+            color: var(--brown);
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .next-btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #B45F06;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .next-btn:hover { background: #7A3E00; }
+        .next-btn:disabled { background: #b0a090; cursor: not-allowed; }
+
+        .empty-msg {
+            text-align: center;
+            padding: 40px;
+            color: #7a6a4a;
+            font-size: 1.1rem;
+            background: var(--card);
+            border-radius: 10px;
+            border: 2px dashed var(--line);
+        }
+    </style>
 </head>
 
 <body>
@@ -16,7 +197,148 @@
         </a>
         <nav id="menu"></nav>
     </header>
-    <nav id="menu"></nav>
+
+    <main>
+        <div class="header-section">
+            <div>
+                <h1>Select Places to Visit</h1>
+                <p class="sub">Choose the attractions you want to explore during your trip to Varanasi.</p>
+            </div>
+            <div class="counter-badge" id="countBadge">Selected: 0 places</div>
+        </div>
+
+        <div class="filter-bar">
+            <select id="regionFilter" class="filter-select">
+                <option value="">All Regions</option>
+            </select>
+            <select id="categoryFilter" class="filter-select">
+                <option value="">All Categories</option>
+            </select>
+        </div>
+
+        <div id="placesGrid" class="places-grid">
+            <div class="empty-msg">Loading attractions...</div>
+        </div>
+
+        <div class="bottom-actions">
+            <a href="regions.html" class="back-btn">&larr; Back to Regions</a>
+            <button id="nextBtn" class="next-btn" disabled>Proceed to Preferences &rarr;</button>
+        </div>
+    </main>
+
+    <script>
+        const API = "http://127.0.0.1:5000";
+        let allPlaces = [];
+        let selectedIds = new Set();
+
+        // Restore saved selections
+        try {
+            const saved = JSON.parse(localStorage.getItem("selected_places") || "[]");
+            if (Array.isArray(saved)) saved.forEach(id => selectedIds.add(Number(id)));
+        } catch (e) {}
+
+        const grid = document.getElementById("placesGrid");
+        const badge = document.getElementById("countBadge");
+        const nextBtn = document.getElementById("nextBtn");
+        const regionFilter = document.getElementById("regionFilter");
+        const categoryFilter = document.getElementById("categoryFilter");
+
+        function updateUI() {
+            badge.textContent = `Selected: ${selectedIds.size} places`;
+            nextBtn.disabled = selectedIds.size === 0;
+            try {
+                localStorage.setItem("selected_places", JSON.stringify(Array.from(selectedIds)));
+            } catch (e) {}
+        }
+
+        function renderPlaces() {
+            const reg = regionFilter.value;
+            const cat = categoryFilter.value;
+
+            const filtered = allPlaces.filter(p => {
+                if (reg && p.region_name !== reg) return false;
+                if (cat && p.category !== cat) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="empty-msg">No places found matching the filters.</div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => {
+                const isSelected = selectedIds.has(Number(p.place_id));
+                const feeText = Number(p.entry_fee) > 0 ? `₹${p.entry_fee}` : "Free";
+                const durText = p.visit_duration_minutes ? `${p.visit_duration_minutes} mins` : "Flexible";
+                return `
+                    <div class="place-card ${isSelected ? 'selected' : ''}" data-id="${p.place_id}">
+                        <div class="card-top">
+                            <input type="checkbox" data-id="${p.place_id}" ${isSelected ? 'checked' : ''}>
+                            <div class="place-title">${p.place_name}</div>
+                        </div>
+                        <div class="place-desc">${p.speciality_description || 'No description available.'}</div>
+                        <div class="card-meta">
+                            <span class="tag">${p.category || 'General'}</span>
+                            <span>⏱ ${durText} • 🏷 ${feeText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            // Add click listeners to cards and checkboxes
+            grid.querySelectorAll(".place-card").forEach(card => {
+                const id = Number(card.getAttribute("data-id"));
+                const cb = card.querySelector("input[type='checkbox']");
+
+                card.addEventListener("click", (e) => {
+                    if (e.target.tagName !== "INPUT") {
+                        cb.checked = !cb.checked;
+                    }
+                    if (cb.checked) {
+                        selectedIds.add(id);
+                        card.classList.add("selected");
+                    } else {
+                        selectedIds.delete(id);
+                        card.classList.remove("selected");
+                    }
+                    updateUI();
+                });
+            });
+        }
+
+        async function loadPlaces() {
+            try {
+                const res = await fetch(`${API}/api/places`);
+                if (!res.ok) throw new Error("Status " + res.status);
+                const data = await res.json();
+                allPlaces = data.places || [];
+
+                // Populate filter options
+                const regions = Array.from(new Set(allPlaces.map(p => p.region_name).filter(Boolean))).sort();
+                const categories = Array.from(new Set(allPlaces.map(p => p.category).filter(Boolean))).sort();
+
+                regions.forEach(r => regionFilter.add(new Option(r, r)));
+                categories.forEach(c => categoryFilter.add(new Option(c, c)));
+
+                regionFilter.addEventListener("change", renderPlaces);
+                categoryFilter.addEventListener("change", renderPlaces);
+
+                renderPlaces();
+                updateUI();
+            } catch (err) {
+                console.error(err);
+                grid.innerHTML = '<div class="empty-msg">Unable to connect to the backend server. Please verify the Flask server is running at http://127.0.0.1:5000.</div>';
+            }
+        }
+
+        nextBtn.addEventListener("click", () => {
+            if (selectedIds.size > 0) {
+                location.href = "preferences.html";
+            }
+        });
+
+        loadPlaces();
+    </script>
 </body>
 
 </html>

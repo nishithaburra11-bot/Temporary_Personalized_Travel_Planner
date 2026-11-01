@@ -1,39 +1,4 @@
-"""
-itinerary.py - Varanasi Smart Trip Planner: itinerary optimisation module (v2).
 
-Method (standard techniques, pure Python; `requests` is needed only for OSRM):
-  1. Cheapest-insertion heuristic  - builds the day-wise routes. Compulsory
-     places are inserted first, then the optional selected places. Each
-     insertion is the one that adds the LEAST extra distance (divided by the
-     place's priority).
-  2. 2-opt local search            - untangles each day's route to cut distance.
-  3. Constraint checking           - every candidate route is simulated against
-     opening/closing hours, closed days, the daily time limit and the budget.
-  4. Rule-based exclusion          - every unscheduled place gets a reason.
-  5. Full re-planning              - recalculate() always rebuilds from scratch.
-  6. Optional OSRM road distances  - one /table request, automatic fallback to
-     straight-line estimates if OSRM is unreachable.
-  7. Optional road geometry        - real road lines (per day) for the map.
-
-IMPORTANT: this is a heuristic planner. It gives a good route, not a proven
-optimum, and it is only as accurate as the data and travel times it is given.
-Verify opening hours, fees and travel times before relying on a plan.
-
-Backend usage (Flask):
-    from itinerary import generate_itinerary, recalculate
-    result = generate_itinerary(trip, places, use_osrm=True, include_geometry=True)
-
-trip (dict) - required: days, hours_per_day, budget, start_coords=(lat, lon)
-              optional: end_coords, start_time ("09:00"), break_minutes (10),
-              transport ("own_vehicle" | "public_transport"), mileage_kmpl (40),
-              fuel_price (100), food_per_day, hotel_per_night, start_date
-              ("YYYY-MM-DD"), selected_places [ids], compulsory_places [ids],
-              travel_time_factor (1.0; use 1.2-1.5 to leave slack for traffic)
-              If selected_places is empty/missing, ALL given places are considered.
-places (list of dict) - Places-table columns: place_id, place_name, latitude,
-              longitude, opening_time, closing_time, closed_days,
-              visit_duration_minutes, entry_fee, priority, source_checked_date
-"""
 import math
 import re
 from datetime import date, datetime, timedelta

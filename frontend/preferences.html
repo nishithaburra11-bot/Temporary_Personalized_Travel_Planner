@@ -3,20 +3,38 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayan | Trip Preferences</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ayan | Preferences</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+
     <style>
         :root {
-            --ink: #3a2a12;
-            --brown: #6b3a06;
-            --gold: #c8922a;
-            --card: #fffdf6;
-            --line: #e3d6ae;
+            --ticket: #8c3b2a;
+            --ticket-soft: #d2b48c;
+            --nav: #f2b544;
+            --gold: #d9822b;
+            --brown: #6b2a1b;
+            --card: #fff8ec;
+            --green: #2e8b57;
+            --green-dark: #1f6a41;
+            --hand: "Kalam", "Segoe Print", "Bradley Hand", cursive;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
 
         body {
             font-family: Georgia, "Times New Roman", serif;
@@ -26,107 +44,772 @@
         }
 
         main {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 32px 24px 60px;
-        }
-
-        h1 { font-size: 2rem; color: var(--brown); margin-bottom: 6px; }
-        .sub { color: #5a4a30; font-size: 1.05rem; margin-bottom: 24px; }
-
-        .form-card {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 24px 28px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(107, 58, 6, .07);
-        }
-
-        .form-card h2 {
-            font-size: 1.25rem;
-            color: var(--brown);
-            margin-bottom: 16px;
-            border-bottom: 1px dashed var(--line);
-            padding-bottom: 8px;
-        }
-
-        .field-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+            gap: 32px;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 32px 40px 70px;
+            align-items: start;
+        }
+
+        .form {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 22px;
+        }
+
+        h1 {
+            font-family: var(--hand);
+            font-weight: 400;
+            font-size: 2.15rem;
+            line-height: 1.2;
+            color: var(--brown);
+        }
+
+        h1 b {
+            font-weight: 700;
+        }
+
+        .sub {
+            margin-top: 6px;
+            line-height: 1.5;
+            color: #191cac;
+        }
+
+        /* ---------- ticket cards (dark) ---------- */
+        .tw {
+            filter: drop-shadow(0 6px 10px rgba(58, 42, 18, .22));
+        }
+
+        .ticket {
+            position: relative;
+            background: var(--ticket);
+            color: var(--paper);
+            padding: 34px 28px 30px;
+            border-radius: 18px;
+            -webkit-mask:
+                radial-gradient(circle 13px at 0 50%, #0000 97%, #000) left / 51% 100% no-repeat,
+                radial-gradient(circle 13px at 100% 50%, #0000 97%, #000) right / 51% 100% no-repeat;
+            mask:
+                radial-gradient(circle 13px at 0 50%, #0000 97%, #000) left / 51% 100% no-repeat,
+                radial-gradient(circle 13px at 100% 50%, #0000 97%, #000) right / 51% 100% no-repeat;
+        }
+
+        .ticket::before,
+        .ticket::after {
+            content: "";
+            position: absolute;
+            left: 26px;
+            right: 26px;
+            border-top: 2px dashed rgba(246, 236, 208, .16);
+        }
+
+        .ticket::before {
+            top: 13px;
+        }
+
+        .ticket::after {
+            bottom: 13px;
+        }
+
+        .lab {
+            display: block;
+            font-size: .8rem;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            color: #d9c58f;
+            margin-bottom: 14px;
+        }
+
+        fieldset {
+            border: 0;
+            min-width: 0;
+        }
+
+        legend.lab {
+            float: left;
+            width: 100%;
+            padding: 0;
+        }
+
+        legend.lab+* {
+            clear: both;
+        }
+
+        /* trip length */
+        .stepper {
+            display: flex;
+            align-items: center;
             gap: 18px;
         }
 
-        @media (max-width: 650px) {
-            .field-grid { grid-template-columns: 1fr; }
+        .stepper button {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 2px solid var(--gold);
+            background: transparent;
+            color: var(--nav);
+            font-size: 1.6rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: background .15s, color .15s, transform .1s;
         }
 
-        .field {
+        .stepper button:hover {
+            background: var(--gold);
+            color: var(--ticket);
+        }
+
+        .stepper button:active {
+            transform: scale(.94);
+        }
+
+        .stepper button:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+            background: transparent;
+            color: var(--nav);
+        }
+
+        .days {
+            font-size: 2.6rem;
+            font-weight: 700;
+            min-width: 2.2ch;
+            text-align: center;
+        }
+
+        .days-unit {
+            color: #d9c58f;
+            margin-left: -8px;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .chip {
+            font: inherit;
+            font-size: .92rem;
+            padding: 8px 16px;
+            border-radius: 99px;
+            border: 1.5px solid rgba(208, 246, 218, 0.25);
+            background: var(--ticket-soft);
+            color: var(--paper);
+            cursor: pointer;
+            transition: background .15s, border-color .15s, color .15s;
+        }
+
+        .chip:hover {
+            border-color: var(--gold);
+        }
+
+        .chip[aria-pressed="true"] {
+            background: var(--nav);
+            border-color: var(--nav);
+            color: var(--ticket);
+            font-weight: 700;
+        }
+
+        .journey {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .track {
+            position: relative;
+            flex: 1;
+            height: 26px;
+            background: radial-gradient(circle, rgba(246, 236, 208, .32) 2px, transparent 2.6px) 0 50% / 18px 8px repeat-x;
+        }
+
+        .track .done {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: radial-gradient(circle, var(--nav) 2px, transparent 2.6px) 0 50% / 18px 8px repeat-x;
+            transition: width .25s;
+        }
+
+        .track .plane {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            font-size: 1.3rem;
+            line-height: 1;
+            margin-top: -.65em;
+            transition: left .25s, transform .25s;
+        }
+
+        /* ---------- budget (light, like the sketch) ---------- */
+        .budget {
+            background: var(--card);
+            border: 3px solid var(--brown);
+            border-radius: 28px;
+            padding: 24px 28px 22px;
+        }
+
+        .budget h2 {
+            font-family: var(--hand);
+            font-weight: 400;
+            font-size: 1.7rem;
+            letter-spacing: .04em;
+            color: var(--brown);
+            margin-bottom: 12px;
+        }
+
+        .money {
+            display: flex;
+            align-items: center;
+            background: #efe6c6;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            padding: 0 14px;
+            transition: border-color .15s, background .15s;
+        }
+
+        .money:focus-within {
+            border-color: var(--gold);
+            background: #fff;
+        }
+
+        .money span {
+            font-size: 1.5rem;
+            color: var(--brown);
+            margin-right: 8px;
+        }
+
+        .money input {
+            flex: 1;
+            min-width: 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            font: inherit;
+            font-size: 1.5rem;
+            color: var(--ink);
+            padding: 14px 0;
+        }
+
+        .money input::placeholder {
+            font-family: var(--hand);
+            font-size: 1.2rem;
+            color: #9b7a55;
+        }
+
+        .budget .note {
+            margin-top: 10px;
+            font-size: .92rem;
+            color: #7a6a4a;
+            min-height: 1.4em;
+        }
+
+        /* ---------- option cards (hotel / food / pace) ---------- */
+        .opts {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .opt {
+            position: relative;
+            display: block;
+            cursor: pointer;
+        }
+
+        .opt input {
+            position: absolute;
+            opacity: 0;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .ob {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
+            height: 100%;
+            padding: 16px 14px 14px;
+            border-radius: 14px;
+            border: 1.5px solid rgba(246, 236, 208, .22);
+            background: var(--ticket-soft);
+            transition: border-color .15s, background .15s, transform .12s;
         }
 
-        label {
-            font-size: 0.9rem;
+        .opt:hover .ob {
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .ob .ic {
+            font-size: 1.7rem;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .ob b {
+            font-size: 1.05rem;
+        }
+
+        .ob small {
+            font-size: .82rem;
+            line-height: 1.35;
+            color: #cdbb8a;
+        }
+
+        .opt input:checked+.ob {
+            border-color: var(--nav);
+            background: #820b31;
+            box-shadow: inset 0 0 0 1px var(--nav);
+        }
+
+        .opt input:checked+.ob::after {
+            content: "✓";
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--nav);
+            color: var(--ticket);
+            font-size: .8rem;
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+        }
+
+        .opt input:focus-visible+.ob {
+            outline: 3px solid var(--nav);
+            outline-offset: 2px;
+        }
+
+        /* ---------- summary column ---------- */
+        .summary {
+            position: sticky;
+            top: 20px;
+            display: grid;
+            gap: 20px;
+        }
+
+        .recap {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 5px solid var(--gold);
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 6px rgba(107, 58, 6, .08);
+        }
+
+        .recap h2 {
             color: var(--brown);
-            font-weight: 600;
+            font-size: 1.25rem;
+            margin-bottom: 4px;
         }
 
-        input[type="text"],
-        input[type="number"],
-        input[type="time"],
-        input[type="date"],
-        select {
-            padding: 10px 14px;
-            font: inherit;
-            font-size: 0.95rem;
-            border: 1.5px solid var(--gold);
-            border-radius: 8px;
-            background: #fff;
-            color: var(--ink);
+        .recap .edit {
+            font-size: .9rem;
+            color: var(--brown);
         }
 
-        input:focus, select:focus {
-            outline: 2px solid var(--gold);
+        .recap .edit:hover {
+            color: var(--gold);
         }
 
-        .help-text {
-            font-size: 0.8rem;
-            color: #7a6a4a;
+        .picked {
+            list-style: none;
+            margin: 12px 0 0;
+            display: grid;
+            gap: 8px;
+            max-height: 230px;
+            overflow-y: auto;
         }
 
-        .bottom-actions {
+        .picked li {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-top: 16px;
-        }
-
-        .back-btn {
-            color: var(--brown);
-            text-decoration: none;
-            font-size: 1rem;
-        }
-
-        .next-btn {
-            display: inline-block;
-            padding: 12px 28px;
-            background: #B45F06;
-            color: #fff;
-            text-decoration: none;
+            gap: 10px;
+            background: #f9f1d6;
             border-radius: 8px;
-            font-size: 16px;
-            border: none;
-            cursor: pointer;
-            font-family: inherit;
+            padding: 8px 10px 8px 12px;
         }
 
-        .next-btn:hover { background: #7A3E00; }
+        .picked .nm {
+            font-size: .95rem;
+            line-height: 1.25;
+        }
+
+        .picked .rg {
+            display: block;
+            font-size: .75rem;
+            color: #7a6a4a;
+        }
+
+        .picked button {
+            flex: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 0;
+            background: transparent;
+            color: var(--brown);
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .picked button:hover {
+            background: #ecd89a;
+        }
+
+        .none {
+            margin-top: 12px;
+            padding: 16px;
+            text-align: center;
+            border: 2px dashed var(--line);
+            border-radius: 10px;
+            color: #7a6a4a;
+            line-height: 1.45;
+        }
+
+        .none a {
+            color: var(--brown);
+            font-weight: 700;
+        }
+
+        dl.facts {
+            margin-top: 16px;
+            border-top: 1px solid var(--line);
+            padding-top: 12px;
+            display: grid;
+            gap: 6px;
+        }
+
+        dl.facts div {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: .95rem;
+        }
+
+        dl.facts dt {
+            color: #7a6a4a;
+        }
+
+        dl.facts dd {
+            font-weight: 700;
+            text-align: right;
+        }
+
+        dl.facts dd small {
+            font-weight: 400;
+            color: #7a6a4a;
+        }
+
+        .go-ticket .ticket {
+            padding: 38px 26px 32px;
+            text-align: center;
+        }
+
+        .go {
+            width: 100%;
+            font: inherit;
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #fff;
+            padding: 16px 20px;
+            border: 0;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #3aa04b, var(--green));
+            box-shadow: 0 6px 0 var(--green-dark);
+            cursor: pointer;
+            transition: transform .1s, box-shadow .1s, filter .15s;
+        }
+
+        .go:hover:not(:disabled) {
+            filter: brightness(1.07);
+        }
+
+        .go:active:not(:disabled) {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 var(--green-dark);
+        }
+
+        .go:disabled {
+            background: #5d5340;
+            box-shadow: 0 6px 0 #463e2e;
+            color: #b9ab86;
+            cursor: not-allowed;
+        }
+
+        .go:focus-visible {
+            outline: 3px solid var(--nav);
+            outline-offset: 3px;
+        }
+
+        .go-hint {
+            margin-top: 18px;
+            font-size: .92rem;
+            color: #d9c58f;
+            line-height: 1.4;
+        }
+
+        .err {
+            margin-top: 14px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #5a2a1c;
+            color: #ffd9cc;
+            font-size: .9rem;
+            line-height: 1.4;
+        }
+
+        .bubble-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 22px;
+            text-align: left;
+        }
+
+        .bubble-row .bag {
+            font-size: 2.4rem;
+            line-height: 1;
+        }
+
+        .bubble {
+            position: relative;
+            background: #fff;
+            color: var(--ink);
+            font-family: var(--hand);
+            font-size: 1.15rem;
+            line-height: 1.25;
+            padding: 10px 16px;
+            border-radius: 16px;
+        }
+
+        .bubble::before {
+            content: "";
+            position: absolute;
+            left: -8px;
+            top: 50%;
+            margin-top: -8px;
+            border: 8px solid transparent;
+            border-right-color: #fff;
+            border-left: 0;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: minmax(0, 1fr);
+                padding: 20px 18px 50px;
+                gap: 24px;
+            }
+
+            .summary {
+                position: static;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .opts {
+                grid-template-columns: 1fr;
+            }
+
+            .ob {
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 4px 12px;
+            }
+
+            .ob small {
+                flex-basis: 100%;
+            }
+
+            .ticket {
+                padding: 32px 20px 28px;
+            }
+
+            .budget {
+                padding: 20px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+            }
+        }
+
+        /* ---------- lively tilted cards ---------- */
+        body {
+            overflow-x: hidden;
+        }
+
+        /* rotated corners never cause a sideways scrollbar */
+        main {
+            padding-left: 52px;
+            padding-right: 52px;
+        }
+
+        /* a different tilt per card (form column) */
+        .form> :nth-child(2) {
+            --tilt: -1.6deg;
+            --d: .05s;
+        }
+
+        /* trip length */
+        .form> :nth-child(3) {
+            --tilt: 1.2deg;
+            --d: .15s;
+        }
+
+        /* budget */
+        .form> :nth-child(4) {
+            --tilt: -1deg;
+            --d: .25s;
+        }
+
+        /* hotel */
+        .form> :nth-child(5) {
+            --tilt: 1.5deg;
+            --d: .35s;
+        }
+
+        /* food */
+        .form> :nth-child(6) {
+            --tilt: -1.2deg;
+            --d: .45s;
+        }
+
+        /* pace */
+
+        /* summary column */
+        .summary> :nth-child(1) {
+            --tilt: 1.4deg;
+            --d: .2s;
+        }
+
+        /* recap */
+        .summary> :nth-child(2) {
+            --tilt: -1.8deg;
+            --d: .4s;
+        }
+
+        /* let's go */
+
+        .form>.tw,
+        .form>.budget,
+        .summary>.recap,
+        .summary>.go-ticket {
+            transform: rotate(var(--tilt, 0deg));
+            transform-origin: 50% 50%;
+            transition: transform .3s cubic-bezier(.3, 1.5, .5, 1);
+            animation: dealIn .6s cubic-bezier(.2, .9, .3, 1.2) var(--d, 0s) backwards;
+        }
+
+        .form>.tw:hover,
+        .form>.budget:hover,
+        .summary>.recap:hover,
+        .summary>.go-ticket:hover {
+            transform: rotate(0deg) scale(1.012);
+        }
+
+        .form>.tw:focus-within,
+        .form>.budget:focus-within {
+            transform: rotate(0deg);
+            /* straighten while the user is typing/selecting */
+        }
+
+        @keyframes dealIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px) rotate(calc(var(--tilt, 0deg) * 4));
+            }
+        }
+
+        /* tiny wobble on the option cards inside each ticket */
+        .opt:nth-child(odd) .ob {
+            transform: rotate(-.8deg);
+        }
+
+        .opt:nth-child(even) .ob {
+            transform: rotate(.8deg);
+        }
+
+        .opt:hover .ob {
+            transform: rotate(0) translateY(-3px);
+        }
+
+        /* keep AFTER the two rules above */
+        .opt input:checked+.ob {
+            transform: rotate(0) scale(1.03);
+        }
+
+        /* chips like little stickers */
+        .chip:nth-child(odd) {
+            transform: rotate(-2deg);
+        }
+
+        .chip:nth-child(even) {
+            transform: rotate(1.6deg);
+        }
+
+        .chip:hover,
+        .chip[aria-pressed="true"] {
+            transform: rotate(0) scale(1.06);
+        }
+
+        /* softer on tablets/phones, none for reduced motion */
+        @media (max-width: 900px) {
+            main {
+                padding-left: 22px;
+                padding-right: 22px;
+            }
+
+            .form>.tw,
+            .form>.budget,
+            .summary>.recap,
+            .summary>.go-ticket {
+                transform: rotate(calc(var(--tilt, 0deg) * .5));
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .form>.tw,
+            .form>.budget,
+            .summary>.recap,
+            .summary>.go-ticket,
+            .opt .ob,
+            .chip {
+                transform: none !important;
+                animation: none !important;
+            }
+        }
+
+        .ticket .days { color: #f6c453 !important; }
     </style>
 </head>
 
 <body>
+
     <header id="topbar">
         <a href="index.html" class="logo">
             <img src="ayan_main.svg" alt="Ayan">
@@ -135,163 +818,358 @@
     </header>
 
     <main>
-        <h1>Set Trip Preferences</h1>
-        <p class="sub">Tell us about your schedule, travel pace, and budget to generate a tailored itinerary.</p>
+        <!-- LEFT: the form -->
+        <section class="form">
+            <div>
+                <h1>Set a budget and a trip length, <b>we'll do the rest</b></h1>
+                <p class="sub">Tell us how you like to travel and we'll fit your places around it.</p>
+            </div>
 
-        <form id="prefForm">
-            <!-- Schedule & Route -->
-            <div class="form-card">
-                <h2>1. Schedule & Endpoints</h2>
-                <div class="field-grid">
-                    <div class="field">
-                        <label for="days">Number of Days *</label>
-                        <input type="number" id="days" min="1" max="14" value="2" required>
-                        <span class="help-text">Duration of your visit (1 to 14 days)</span>
+            <!-- Trip length -->
+            <div class="tw">
+                <div class="ticket">
+                    <span class="lab" id="lenLabel">Trip length</span>
+                    <div class="stepper" role="group" aria-labelledby="lenLabel">
+                        <button type="button" id="minus" aria-label="One day less">&minus;</button>
+                        <span class="days" id="days" aria-live="polite">7</span>
+                        <span class="days-unit" id="daysUnit">days</span>
+                        <button type="button" id="plus" aria-label="One day more">+</button>
                     </div>
-
-                    <div class="field">
-                        <label for="hoursPerDay">Hours Available Per Day *</label>
-                        <input type="number" id="hoursPerDay" min="1" max="16" step="0.5" value="8" required>
-                        <span class="help-text">Sightseeing hours per day (e.g. 8 hours)</span>
+                    <div class="chips" id="presets">
+                        <button type="button" class="chip" data-days="2">Weekend</button>
+                        <button type="button" class="chip" data-days="7">1 week</button>
+                        <button type="button" class="chip" data-days="14">2 weeks</button>
+                        <button type="button" class="chip" data-days="30">A month</button>
                     </div>
-
-                    <div class="field">
-                        <label for="startLoc">Starting Point *</label>
-                        <input type="text" id="startLoc" value="Varanasi Junction Railway Station" required>
-                        <span class="help-text">Hotel, station, or landmark</span>
-                    </div>
-
-                    <div class="field">
-                        <label for="endLoc">Ending Point *</label>
-                        <input type="text" id="endLoc" value="Varanasi Junction Railway Station" required>
-                        <span class="help-text">Where each day concludes</span>
-                    </div>
-
-                    <div class="field">
-                        <label for="startTime">Daily Start Time</label>
-                        <input type="time" id="startTime" value="09:00">
-                    </div>
-
-                    <div class="field">
-                        <label for="startDate">Trip Start Date (Optional)</label>
-                        <input type="date" id="startDate">
+                    <div class="journey" aria-hidden="true">
+                        <div class="track">
+                            <div class="done" id="done"></div><span class="plane" id="plane">✈️</span>
+                        </div>
+                        <span>📍</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Budget & Logistics -->
-            <div class="form-card">
-                <h2>2. Budget & Logistics</h2>
-                <div class="field-grid">
-                    <div class="field">
-                        <label for="budget">Total Budget (₹) *</label>
-                        <input type="number" id="budget" min="0" step="500" value="10000" required>
-                        <span class="help-text">Maximum spend for tickets, travel, food, stay</span>
-                    </div>
-
-                    <div class="field">
-                        <label for="travelers">Number of Travelers</label>
-                        <input type="number" id="travelers" min="1" max="50" value="1" required>
-                    </div>
-
-                    <div class="field">
-                        <label for="transport">Transport Mode</label>
-                        <select id="transport">
-                            <option value="own_vehicle" selected>Own Vehicle / Cab (Road)</option>
-                            <option value="mixed">Mixed (Cab & Walking)</option>
-                        </select>
-                    </div>
-
-                    <div class="field">
-                        <label for="pace">Sightseeing Pace</label>
-                        <select id="pace">
-                            <option value="relaxed">Relaxed (more leisure, 20m breaks)</option>
-                            <option value="normal" selected>Normal (balanced, 10m breaks)</option>
-                            <option value="fast">Fast (cover maximum places, 5m breaks)</option>
-                        </select>
-                    </div>
+            <div class="tw">
+                <div class="ticket">
+                    <label class="lab" for="startLoc">Starting location</label>
+                    <input id="startLoc" list="locations" placeholder="Choose a stored place" style="width:100%;padding:12px;font:inherit;" required>
+                    <label class="lab" for="endLoc">Ending location</label>
+                    <input id="endLoc" list="locations" placeholder="Same as starting location if blank" style="width:100%;padding:12px;font:inherit;">
+                    <datalist id="locations"></datalist>
+                    <label class="lab" for="startDate">Travel start date (optional)</label>
+                    <input id="startDate" type="date" style="padding:12px;font:inherit;">
+                    <p class="note">Choose a location from the curated dataset. Planning uses an 8-hour day starting at 09:00, for one traveler.</p>
                 </div>
             </div>
 
-            <!-- Hospitality Preferences -->
-            <div class="form-card">
-                <h2>3. Hospitality & Food</h2>
-                <div class="field-grid">
-                    <div class="field">
-                        <label for="foodPref">Food Preference</label>
-                        <select id="foodPref">
-                            <option value="any" selected>Any / Local Food</option>
-                            <option value="vegetarian">Vegetarian</option>
-                            <option value="vegan">Vegan</option>
-                            <option value="jain">Jain</option>
-                            <option value="non_vegetarian">Non-Vegetarian</option>
-                        </select>
-                    </div>
+            <!-- Budget -->
+            <div class="budget">
+                <h2><label for="budget">BUDGET:</label></h2>
+                <div class="money">
+                    <span aria-hidden="true">₹</span>
+                    <input id="budget" type="text" inputmode="numeric" autocomplete="off"
+                        placeholder="Enter your budget">
+                </div>
+                <p class="note" id="budgetNote">Total for the whole trip.</p>
+            </div>
 
-                    <div class="field">
-                        <label for="stayPref">Accommodation Preference</label>
-                        <select id="stayPref">
-                            <option value="none" selected>No Accommodation needed</option>
-                            <option value="budget">Budget Stay</option>
-                            <option value="normal">Standard / 3-Star</option>
-                            <option value="luxury">Luxury / 5-Star</option>
-                        </select>
-                    </div>
+            <!-- Hotel -->
+            <div class="tw">
+                <div class="ticket">
+                    <fieldset>
+                        <legend class="lab">Where would you like to stay?</legend>
+                        <div class="opts" id="hotelOpts"></div>
+                    </fieldset>
                 </div>
             </div>
 
-            <div class="bottom-actions">
-                <a href="places.html" class="back-btn">&larr; Back to Places</a>
-                <button type="submit" class="next-btn">Proceed to Customize &rarr;</button>
+            <!-- Food -->
+            <div class="tw">
+                <div class="ticket">
+                    <fieldset>
+                        <legend class="lab">How do you like to eat?</legend>
+                        <div class="opts" id="foodOpts"></div>
+                    </fieldset>
+                </div>
             </div>
-        </form>
+
+            <!-- Pace -->
+            <div class="tw">
+                <div class="ticket">
+                    <fieldset>
+                        <legend class="lab">How busy should each day be?</legend>
+                        <div class="opts" id="paceOpts"></div>
+                    </fieldset>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT: recap + go -->
+        <aside class="summary">
+            <div class="recap">
+                <h2>Your trip so far</h2>
+                <a class="edit" href="places.html">&larr; Edit places</a>
+
+                <ul class="picked" id="picked"></ul>
+                <div class="none" id="none" hidden>
+                    No places picked yet.<br><a href="places.html">Choose places on the Places page</a>
+                </div>
+
+                <dl class="facts" id="facts"></dl>
+            </div>
+
+            <div class="tw go-ticket">
+                <div class="ticket">
+                    <button type="button" class="go" id="go">Proceed to Customize</button>
+                    <p class="go-hint" id="goHint">We'll show trips that fit your numbers.</p>
+                    <p class="err" id="err" role="alert" hidden></p>
+                    <div class="bubble-row">
+                        <span class="bag" aria-hidden="true">🧳</span>
+                        <div class="bubble">Hold my map, off we go!</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
     </main>
 
     <script>
-        const form = document.getElementById("prefForm");
+        // ---- connection settings (change here if your backend differs) ----
+        const API = "http://127.0.0.1:5000";
+        // Planning happens on plan.html after compulsory places are chosen.
+        const NEXT_PAGE = "customize.html";
 
-        // Restore existing preferences if already entered
-        try {
-            const saved = JSON.parse(localStorage.getItem("trip_preferences") || "{}");
-            if (saved.days) document.getElementById("days").value = saved.days;
-            if (saved.hours_per_day) document.getElementById("hoursPerDay").value = saved.hours_per_day;
-            if (saved.start) document.getElementById("startLoc").value = saved.start;
-            if (saved.end) document.getElementById("endLoc").value = saved.end;
-            if (saved.start_time) document.getElementById("startTime").value = saved.start_time;
-            if (saved.start_date) document.getElementById("startDate").value = saved.start_date;
-            if (saved.budget !== undefined) document.getElementById("budget").value = saved.budget;
-            if (saved.travelers) document.getElementById("travelers").value = saved.travelers;
-            if (saved.transport) document.getElementById("transport").value = saved.transport;
-            if (saved.travel_pace) document.getElementById("pace").value = saved.travel_pace;
-            if (saved.food_preference) document.getElementById("foodPref").value = saved.food_preference;
-            if (saved.stay_preference) document.getElementById("stayPref").value = saved.stay_preference;
-        } catch (e) {}
+        // Shared with regions.html
+        const PLACES_KEY = "ayan_selected_places"; // sessionStorage: { "region|place": {region_id, region_name, place_name, category} }
+        const PREFS_KEY = "ayan_preferences";     // localStorage: last chosen preferences
+        const PLAN_KEY = "trip_result";       // sessionStorage: backend response for the next page
 
-        form.addEventListener("submit", (e) => {
-            e.preventDefault();
+        const MIN_DAYS = 1, MAX_DAYS = 30;
 
+        const OPTIONS = {
+            hotel: [
+                { v: "basic", icon: "🛏️", name: "Basic", text: "Simple rooms, hostels and dharamshalas" },
+                { v: "comfort", icon: "🏨", name: "Comfort", text: "Clean, well-located mid-range hotels" },
+                { v: "luxury", icon: "🏰", name: "Luxury", text: "Premium hotels and heritage stays" }
+            ],
+            food: [
+                { v: "budget", icon: "🥘", name: "Budget", text: "Street food and local thalis" },
+                { v: "standard", icon: "🍛", name: "Standard", text: "Regular sit-down restaurants" },
+                { v: "premium", icon: "🍽️", name: "Premium", text: "Fine dining and top cafes" }
+            ],
+            pace: [
+                { v: "relaxed", icon: "🌿", name: "Relaxed", text: "1–2 places a day, lots of free time" },
+                { v: "balanced", icon: "⚖️", name: "Balanced", text: "About 3 places a day" },
+                { v: "packed", icon: "⚡", name: "Packed", text: "4 or more, make the most of it" }
+            ]
+        };
+
+        const state = { days: 7, budget: 0, hotel: "comfort", food: "standard", pace: "balanced" };
+
+        const $ = id => document.getElementById(id);
+        const budgetEl = $("budget");
+
+        function esc(text) {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        const inr = n => "₹" + Number(n).toLocaleString("en-IN");
+        const label = (group, v) => (OPTIONS[group].find(o => o.v === v) || {}).name || v;
+
+        // ---- storage helpers (never let storage errors break the page) ----
+        function readPlaces() {
+            try { return JSON.parse(sessionStorage.getItem(PLACES_KEY) || "{}"); } catch (e) { return {}; }
+        }
+        function writePlaces(obj) {
+            sessionStorage.setItem(PLACES_KEY, JSON.stringify(obj));
+            const ids = Object.values(obj).map(p => Number(p.place_id));
+            localStorage.setItem("selected_places", JSON.stringify(ids));
+            const compulsory = JSON.parse(localStorage.getItem("compulsory_places") || "[]");
+            localStorage.setItem("compulsory_places", JSON.stringify(compulsory.filter(id => ids.includes(Number(id)))));
+            localStorage.removeItem("trip_result");
+        }
+        function loadPrefs() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || "null");
+                if (!saved) return;
+                if (Number.isInteger(saved.days)) state.days = Math.min(MAX_DAYS, Math.max(MIN_DAYS, saved.days));
+                if (Number.isFinite(saved.budget) && saved.budget > 0) state.budget = saved.budget;
+                for (const g of ["hotel", "food", "pace"]) {
+                    if (OPTIONS[g].some(o => o.v === saved[g])) state[g] = saved[g];
+                }
+            } catch (e) { }
+        }
+        function savePrefs() {
+            try { localStorage.setItem(PREFS_KEY, JSON.stringify(state)); } catch (e) { }
+        }
+
+        // ---- build the option cards ----
+        function buildOptions(group, containerId) {
+            $(containerId).innerHTML = OPTIONS[group].map(o => `
+                <label class="opt">
+                    <input type="radio" name="${group}" value="${o.v}">
+                    <span class="ob">
+                        <span class="ic" aria-hidden="true">${o.icon}</span>
+                        <b>${o.name}</b>
+                        <small>${o.text}</small>
+                    </span>
+                </label>`).join("");
+            $(containerId).addEventListener("change", e => {
+                if (e.target.name === group) { state[group] = e.target.value; update(); }
+            });
+        }
+
+        // ---- render ----
+        function update() {
+            // days
+            $("days").textContent = state.days;
+            $("daysUnit").textContent = state.days === 1 ? "day" : "days";
+            $("minus").disabled = state.days <= MIN_DAYS;
+            $("plus").disabled = state.days >= MAX_DAYS;
+            document.querySelectorAll("#presets .chip").forEach(c =>
+                c.setAttribute("aria-pressed", String(Number(c.dataset.days) === state.days)));
+            const p = ((state.days - MIN_DAYS) / (MAX_DAYS - MIN_DAYS)) * 100;
+            $("done").style.width = p + "%";
+            $("plane").style.left = p + "%";
+            $("plane").style.transform = `translateX(-${p}%)`;
+
+            // budget note
+            $("budgetNote").textContent = state.budget > 0
+                ? `That's about ${inr(Math.round(state.budget / state.days))} per day.`
+                : "Total for the whole trip.";
+
+            // radios
+            for (const g of ["hotel", "food", "pace"]) {
+                const r = document.querySelector(`input[name="${g}"][value="${state[g]}"]`);
+                if (r) r.checked = true;
+            }
+
+            // places
+            const places = Object.entries(readPlaces());
+            $("picked").innerHTML = places.map(([key, p]) => `
+                <li>
+                    <span class="nm">${esc(p.place_name)}<span class="rg">${esc(p.region_name || "")}</span></span>
+                    <button type="button" data-key="${encodeURIComponent(key)}" aria-label="Remove ${esc(p.place_name)}">&times;</button>
+                </li>`).join("");
+            $("none").hidden = places.length > 0;
+
+            // recap
+            $("facts").innerHTML = `
+                <div><dt>Places</dt><dd>${places.length}</dd></div>
+                <div><dt>Trip length</dt><dd>${state.days} ${state.days === 1 ? "day" : "days"}</dd></div>
+                <div><dt>Budget</dt><dd>${state.budget > 0 ? inr(state.budget) : "<small>not set</small>"}</dd></div>
+                <div><dt>Stay</dt><dd>${label("hotel", state.hotel)}</dd></div>
+                <div><dt>Food</dt><dd>${label("food", state.food)}</dd></div>
+                <div><dt>Pace</dt><dd>${label("pace", state.pace)}</dd></div>`;
+
+            // go button
+            const go = $("go");
+            const hint = $("goHint");
+            if (places.length === 0) {
+                go.disabled = true; hint.textContent = "Pick at least one place on the Places page first.";
+            } else if (!(state.budget > 0)) {
+                go.disabled = true; hint.textContent = "Enter your budget to continue.";
+            } else {
+                go.disabled = false; hint.textContent = "We'll show trips that fit your numbers.";
+            }
+            savePrefs();
+            localStorage.removeItem("trip_result");
+        }
+
+        // ---- events ----
+        $("minus").addEventListener("click", () => { state.days = Math.max(MIN_DAYS, state.days - 1); update(); });
+        $("plus").addEventListener("click", () => { state.days = Math.min(MAX_DAYS, state.days + 1); update(); });
+        $("presets").addEventListener("click", e => {
+            const chip = e.target.closest(".chip");
+            if (chip) { state.days = Number(chip.dataset.days); update(); }
+        });
+
+        budgetEl.addEventListener("input", () => {
+            const digits = budgetEl.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 9);
+            state.budget = digits ? Number(digits) : 0;
+            budgetEl.value = digits ? state.budget.toLocaleString("en-IN") : "";
+            update();
+        });
+
+        $("picked").addEventListener("click", e => {
+            const btn = e.target.closest("button[data-key]");
+            if (!btn) return;
+            const places = readPlaces();
+            delete places[decodeURIComponent(btn.dataset.key)];
+            writePlaces(places);
+            update();
+        });
+
+        $("go").addEventListener("click", async () => {
+            const err = $("err");
+            err.hidden = true;
+
+            if (!Object.keys(readPlaces()).length || !(state.budget > 0)) return;
+            const start = $("startLoc").value.trim();
+            const end = $("endLoc").value.trim() || start;
+            if (!start) {
+                err.textContent = "Choose your starting location.";
+                err.hidden = false;
+                return;
+            }
+            const options = [...$("locations").options].map(o => o.value);
+            if (!options.includes(start) || !options.includes(end)) {
+                err.textContent = "Choose start and end locations from the stored suggestions.";
+                err.hidden = false;
+                return;
+            }
             const prefs = {
-                days: parseInt(document.getElementById("days").value, 10),
-                hours_per_day: parseFloat(document.getElementById("hoursPerDay").value),
-                start: document.getElementById("startLoc").value.trim(),
-                end: document.getElementById("endLoc").value.trim(),
-                start_time: document.getElementById("startTime").value || "09:00",
-                start_date: document.getElementById("startDate").value || null,
-                budget: parseFloat(document.getElementById("budget").value),
-                travelers: parseInt(document.getElementById("travelers").value, 10),
-                transport: document.getElementById("transport").value,
-                travel_pace: document.getElementById("pace").value,
-                food_preference: document.getElementById("foodPref").value,
-                stay_preference: document.getElementById("stayPref").value,
+                days: state.days, budget: state.budget,
+                stay_preference: {basic:"budget", comfort:"normal", luxury:"luxury"}[state.hotel],
+                food_budget: state.food, food_preference: "any",
+                travel_pace: {relaxed:"relaxed", balanced:"normal", packed:"fast"}[state.pace],
+                start, end, start_date: $("startDate").value || null,
+                hours_per_day: 8, start_time: "09:00", travelers: 1, transport: "own_vehicle"
             };
-
             try {
                 localStorage.setItem("trip_preferences", JSON.stringify(prefs));
-            } catch (err) {}
-
-            location.href = "customize.html";
+                localStorage.removeItem("trip_result");
+                location.href = NEXT_PAGE;
+            } catch (error) {
+                err.textContent = "Unable to save preferences. Enable browser storage and retry.";
+                err.hidden = false;
+            }
         });
+
+        async function loadSelectedPlaces() {
+            $("go").disabled = true;
+            try {
+                const prefs = JSON.parse(localStorage.getItem("trip_preferences") || "{}");
+                $("startLoc").value = typeof prefs.start === "string" ? prefs.start : "";
+                $("endLoc").value = typeof prefs.end === "string" ? prefs.end : "";
+                $("startDate").value = prefs.start_date || "";
+                const res = await fetch(API + "/api/places");
+                const data = await res.json();
+                if (!res.ok || !Array.isArray(data.places)) throw new Error(data.error || "Unable to load places.");
+                const ids = new Set(JSON.parse(localStorage.getItem("selected_places") || "[]").map(Number));
+                writePlaces(Object.fromEntries(data.places.filter(p => ids.has(Number(p.place_id))).map(p => [p.place_id, p])));
+                data.places.filter(p => p.latitude != null && p.longitude != null).forEach(p => {
+                    $("locations").append(new Option(p.place_name, p.place_name));
+                });
+                update();
+            } catch (error) {
+                $("err").textContent = error.message;
+                $("err").hidden = false;
+                $("go").disabled = true;
+            }
+        }
+
+        // ---- start ----
+        buildOptions("hotel", "hotelOpts");
+        buildOptions("food", "foodOpts");
+        buildOptions("pace", "paceOpts");
+        loadPrefs();
+        if (state.budget > 0) budgetEl.value = state.budget.toLocaleString("en-IN");
+        update();
+        loadSelectedPlaces();
     </script>
+
 </body>
 
 </html>

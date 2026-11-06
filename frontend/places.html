@@ -230,13 +230,13 @@
         let allPlaces = [];
         let selectedIds = new Set();
 
-        const selectedRegion = localStorage.getItem("selectedRegion") || "";
-        const selectedRegionName = localStorage.getItem("selectedRegionName") || "";
-
-        const subHeading = document.getElementById("subHeading");
-        if (selectedRegionName) {
-            subHeading.innerHTML = `Showing attractions in <strong>${selectedRegionName}</strong> <a href="regions.html">(Change Region)</a>`;
-        }
+        let selectedRegions = [];
+        try { selectedRegions = JSON.parse(localStorage.getItem("selectedRegions") || "[]"); } catch (e) {}
+        const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+        const categoryKey = value => String(value || "").trim().toLowerCase();
+        document.getElementById("subHeading").textContent = selectedRegions.length
+            ? "Showing attractions in " + selectedRegions.join(", ")
+            : "Choose regions before selecting places.";
 
         // Restore saved selections
         try {
@@ -254,6 +254,11 @@
             nextBtn.disabled = selectedIds.size === 0;
             try {
                 localStorage.setItem("selected_places", JSON.stringify(Array.from(selectedIds)));
+                const compulsory = JSON.parse(localStorage.getItem("compulsory_places") || "[]");
+                localStorage.setItem("compulsory_places", JSON.stringify(compulsory.filter(id => selectedIds.has(Number(id)))));
+                const details = Object.fromEntries(allPlaces.filter(p => selectedIds.has(Number(p.place_id))).map(p => [p.place_id, p]));
+                sessionStorage.setItem("ayan_selected_places", JSON.stringify(details));
+                localStorage.removeItem("trip_result");
             } catch (e) {}
         }
 
@@ -261,7 +266,7 @@
             const cat = categoryFilter.value;
 
             const filtered = allPlaces.filter(p => {
-                if (cat && p.category !== cat) return false;
+                if (cat && categoryKey(p.category) !== cat) return false;
                 return true;
             });
 
@@ -276,19 +281,30 @@
                 const durText = p.visit_duration_minutes ? `${p.visit_duration_minutes} mins` : "Flexible";
                 return `
                     <div class="place-card ${isSelected ? 'selected' : ''}" data-id="${p.place_id}">
+                        <div class="place-image" style="height:160px; overflow:hidden; margin-bottom:12px; display:flex; align-items:center; justify-content:center; background:#f6e7b8;">
+                            <span>Image unavailable</span>
+                            ${p.image_url ? `<img src="${API}/api/images/places/${encodeURIComponent(p.image_url)}" alt="${esc(p.place_name)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">` : ''}
+                        </div>
                         <div class="card-top">
                             <input type="checkbox" data-id="${p.place_id}" ${isSelected ? 'checked' : ''}>
-                            <div class="place-title">${p.place_name}</div>
+                            <div class="place-title">${esc(p.place_name)}</div>
                         </div>
-                        <div class="place-desc">${p.speciality_description || 'No description available.'}</div>
+                        <div class="place-desc">${esc(p.speciality_description || 'No description available.')}</div>
                         <div class="card-meta">
-                            <span class="tag">${p.category || 'General'}</span>
+                            <span class="tag">${esc(p.category || 'General')}</span>
                             <span>⏱ ${durText} • 🏷 ${feeText}</span>
                         </div>
                     </div>
                 `;
             }).join("");
 
+            grid.querySelectorAll(".place-image img").forEach(img => {
+                img.previousElementSibling.hidden = true;
+                img.addEventListener("error", () => {
+                    img.previousElementSibling.hidden = false;
+                    img.remove();
+                });
+            });
             // Click listeners
             grid.querySelectorAll(".place-card").forEach(card => {
                 const id = Number(card.getAttribute("data-id"));
@@ -312,17 +328,25 @@
 
         async function loadPlaces() {
             try {
-                const url = selectedRegion ?
-                    `${API}/api/places?region_id=${encodeURIComponent(selectedRegion)}` :
-                    `${API}/api/places`;
+                if (!selectedRegions.length) {
+                    grid.innerHTML = '<div class="empty-msg">Select at least one region first.</div>';
+                    return;
+                }
+                const query = new URLSearchParams();
+                selectedRegions.forEach(name => query.append("region", name));
+                const url = API + "/api/places?" + query;
                 const res = await fetch(url);
                 if (!res.ok) throw new Error("Status " + res.status);
                 const data = await res.json();
-                allPlaces = data.places || [];
+                if (data.success === false || !Array.isArray(data.places)) throw new Error(data.error || "Invalid places response");
+                allPlaces = data.places;
+                const available = new Set(allPlaces.map(p => Number(p.place_id)));
+                selectedIds = new Set([...selectedIds].filter(id => available.has(id)));
 
                 // Categories for filter
-                const categories = Array.from(new Set(allPlaces.map(p => p.category).filter(Boolean))).sort();
-                categories.forEach(c => categoryFilter.add(new Option(c, c)));
+                const categories = new Map();
+                allPlaces.forEach(p => { if (p.category) categories.set(categoryKey(p.category), p.category); });
+                [...categories].sort().forEach(([key, label]) => categoryFilter.add(new Option(label, key)));
                 categoryFilter.addEventListener("change", renderPlaces);
 
                 renderPlaces();

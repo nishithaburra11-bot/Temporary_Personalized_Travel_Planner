@@ -299,6 +299,7 @@
             const errBox = document.getElementById("errorState");
             const errMsg = document.getElementById("errorMsg");
 
+            localStorage.removeItem("trip_result");
             loading.style.display = "block";
             content.style.display = "none";
             errBox.style.display = "none";
@@ -313,6 +314,7 @@
                 prefs = JSON.parse(localStorage.getItem("trip_preferences") || "{}");
             } catch (e) {}
 
+            compulsoryIds = compulsoryIds.filter(id => selectedIds.includes(id));
             if (selectedIds.length === 0) {
                 loading.style.display = "none";
                 errBox.style.display = "block";
@@ -328,9 +330,10 @@
                 transport: prefs.transport || "own_vehicle",
                 travel_pace: prefs.travel_pace || "normal",
                 food_preference: prefs.food_preference || "any",
+                food_budget: prefs.food_budget || "standard",
                 stay_preference: prefs.stay_preference || "none",
-                start: prefs.start || "Varanasi Junction Railway Station",
-                end: prefs.end || "Varanasi Junction Railway Station",
+                start: prefs.start || "",
+                end: prefs.end || prefs.start || "",
                 start_time: prefs.start_time || "09:00",
                 start_date: prefs.start_date || null,
                 selected_places: selectedIds,
@@ -346,7 +349,7 @@
 
                 const data = await res.json();
                 if (!res.ok || data.success === false) {
-                    throw new Error(data.error || (data.details ? data.details.join(", ") : "Failed to plan trip"));
+                    throw new Error([data.error, ...(data.details || [])].filter(Boolean).join(" ") || "Failed to plan trip");
                 }
 
                 localStorage.setItem("trip_result", JSON.stringify(data));
@@ -369,8 +372,8 @@
 
             // 1. Stats
             const totalStops = (data.itinerary_by_day || []).reduce((acc, d) => acc + (d.stops || []).length, 0);
-            const estCost = data.budget_breakdown ? data.budget_breakdown.total_estimated_cost : (data.cost_summary ? data.cost_summary.total : 0);
-            const totalKm = data.route_summary ? data.route_summary.total_km : 0;
+            const estCost = data.cost_breakdown ? data.cost_breakdown.total : 0;
+            const totalKm = data.total_distance_km || 0;
 
             summary.innerHTML = `
                 <div class="summary-stat">
@@ -414,10 +417,10 @@
                         return `
                             ${legHtml}
                             <div class="stop-item">
-                                <div class="stop-time">${s.arrival_time || s.arrive || ''} - ${s.departure_time || s.leave || ''}</div>
+                                <div class="stop-time">${s.visit_start_time || s.arrival_time || s.arrive || ''} - ${s.departure_time || s.leave || ''}</div>
                                 <div class="stop-name">${s.place_name || s.name || 'Attraction'}</div>
                                 <div class="stop-details">
-                                    ⏱ Stay: ${s.visit_duration_minutes || s.duration_minutes || 45} mins${cost}
+                                    ⏱ Stay: ${s.visit_duration_minutes ?? s.duration_minutes ?? "Unknown"} mins${cost}
                                 </div>
                             </div>
                         `;
@@ -427,7 +430,7 @@
                         <div class="day-block">
                             <div class="day-header">
                                 <span class="day-title">Day ${d.day || d.day_number || 1} ${d.date ? '(' + d.date + ')' : ''}</span>
-                                <span class="day-meta">${stops.length} Stops • Daily Travel: ~${Math.round(d.travel_km || 0)} km</span>
+                                <span class="day-meta">${stops.length} Stops • Daily Travel: ~${Math.round(d.total_distance_km || 0)} km</span>
                             </div>
                             <div class="timeline">
                                 ${stopsHtml || '<p>No stops scheduled for this day.</p>'}

@@ -1,39 +1,4 @@
-"""
-itinerary.py - Varanasi Smart Trip Planner: itinerary optimisation module (v2).
 
-Method (standard techniques, pure Python; `requests` is needed only for OSRM):
-  1. Cheapest-insertion heuristic  - builds the day-wise routes. Compulsory
-     places are inserted first, then the optional selected places. Each
-     insertion is the one that adds the LEAST extra distance (divided by the
-     place's priority).
-  2. 2-opt local search            - untangles each day's route to cut distance.
-  3. Constraint checking           - every candidate route is simulated against
-     opening/closing hours, closed days, the daily time limit and the budget.
-  4. Rule-based exclusion          - every unscheduled place gets a reason.
-  5. Full re-planning              - recalculate() always rebuilds from scratch.
-  6. Optional OSRM road distances  - one /table request, automatic fallback to
-     straight-line estimates if OSRM is unreachable.
-  7. Optional road geometry        - real road lines (per day) for the map.
-
-IMPORTANT: this is a heuristic planner. It gives a good route, not a proven
-optimum, and it is only as accurate as the data and travel times it is given.
-Verify opening hours, fees and travel times before relying on a plan.
-
-Backend usage (Flask):
-    from itinerary import generate_itinerary, recalculate
-    result = generate_itinerary(trip, places, use_osrm=True, include_geometry=True)
-
-trip (dict) - required: days, hours_per_day, budget, start_coords=(lat, lon)
-              optional: end_coords, start_time ("09:00"), break_minutes (10),
-              transport ("own_vehicle" | "public_transport"), mileage_kmpl (40),
-              fuel_price (100), food_per_day, hotel_per_night, start_date
-              ("YYYY-MM-DD"), selected_places [ids], compulsory_places [ids],
-              travel_time_factor (1.0; use 1.2-1.5 to leave slack for traffic)
-              If selected_places is empty/missing, ALL given places are considered.
-places (list of dict) - Places-table columns: place_id, place_name, latitude,
-              longitude, opening_time, closing_time, closed_days,
-              visit_duration_minutes, entry_fee, priority, source_checked_date
-"""
 import math
 import re
 from datetime import date, datetime, timedelta
@@ -271,6 +236,7 @@ def add_route_geometry(result, base_url=DEFAULT_OSRM_URL, timeout=15, fetch_fn=N
 
 class Planner:
     REASON_TEXT = {
+        "pace": "daily stop limit for the selected travel pace reached",
         "closed": "closed on all the trip day(s)",
         "hours": "cannot be reached within its opening hours alongside the other stops",
         "time": "insufficient remaining time in the available days",
@@ -426,6 +392,8 @@ class Planner:
     # ---------- constraint check: simulate one day ----------
     def sim_day(self, d, pids):
         """Return (day_dict, None) if feasible, else (None, reason_code)."""
+        if self.trip.get("max_stops_per_day") and len(pids) > self.trip["max_stops_per_day"]:
+            return None, "pace"
         if not pids:
             return {"stops": [], "km": 0.0, "fees": 0.0, "cost": 0.0, "back_km": 0.0,
                     "back_min": 0.0, "end_time": self.start_min}, None
@@ -564,7 +532,7 @@ class Planner:
                 record(pid, f"Place {pid}", pid, msg, [msg],
                        ["Check the place id, or remove it from the compulsory places."])
 
-        order = ["closed", "no_route", "hours", "time", "budget"]
+        order = ["closed", "no_route", "hours", "time", "budget", "pace"]
         for pid, p in self.places.items():
             if pid in scheduled:
                 continue
@@ -611,6 +579,7 @@ class Planner:
                              "duration_min": round(st["travel_min"]),
                              "distance_source": self.source, "cost_status": "estimated"})
                 items.append({"place_id": p["id"], "place_name": p["name"],
+                              "visit_duration_minutes": p["dur"],
                               "latitude": p["xy"][0], "longitude": p["xy"][1],
                               "arrival_time": fmt(st["arrive"]),
                               "visit_start_time": fmt(st["begin"]),

@@ -15,6 +15,7 @@ Endpoints
   GET  /api/resources?place_ids=1,2
 """
 import json
+import math
 import os
 import re
 from datetime import timedelta
@@ -146,8 +147,10 @@ def _num(data, key, default=None, minimum=None, maximum=None, integer=False, err
         errors.append(f"'{key}' is required.")
         return None
     try:
+        if isinstance(val, bool) or not math.isfinite(float(val)) or (integer and float(val) != int(float(val))):
+            raise ValueError()
         val = int(val) if integer else float(val)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         errors.append(f"'{key}' must be a number.")
         return None
     if (minimum is not None and val < minimum) or (maximum is not None and val > maximum):
@@ -172,7 +175,7 @@ def validate_trip(data):
     if not isinstance(data, dict):
         raise ApiError("Request body must be a JSON object.")
     errors, p = [], {"raw": data}
-    p["days"] = _num(data, "days", minimum=1, maximum=14, integer=True, errors=errors)
+    p["days"] = _num(data, "days", minimum=1, maximum=30, integer=True, errors=errors)
     p["hours_per_day"] = _num(data, "hours_per_day", minimum=1, maximum=16, errors=errors)
     p["budget"] = _num(data, "budget", minimum=0, errors=errors)
     p["travelers"] = _num(data, "travelers", default=1, minimum=1, maximum=50, integer=True, errors=errors)
@@ -183,10 +186,13 @@ def validate_trip(data):
     if p["transport"] is None:
         errors.append(f"'transport' must be one of {sorted(TRANSPORT_ALIASES)}.")
     p["food_preference"] = data.get("food_preference", "any")
+    p["food_budget"] = data.get("food_budget", "standard")
+    if not isinstance(p["food_budget"], str) or p["food_budget"] not in {"budget", "standard", "premium"}:
+        errors.append("'food_budget' must be budget, standard or premium.")
     p["stay_preference"] = data.get("stay_preference", "none")
     p["travel_pace"] = data.get("travel_pace", "normal")
     for key, allowed in (("food_preference", FOOD_PREFS), ("stay_preference", STAY_PREFS), ("travel_pace", set(PACES))):
-        if p[key] not in allowed:
+        if not isinstance(p[key], str) or p[key] not in allowed:
             errors.append(f"'{key}' must be one of {sorted(allowed)}.")
     p["start_time"] = data.get("start_time") or "09:00"
     p["start_date"] = data.get("start_date")
@@ -204,7 +210,7 @@ def validate_trip(data):
 
 
 def resolve_location(value):
-    """-> (lat, lon, label). Accepts {lat,lng}, a place/hotel name from the DB, or free text (Nominatim)."""
+    """Resolve coordinates or a curated place/hotel name without external services."""
     if isinstance(value, dict):
         try:
             return float(value["lat"]), float(value["lng"]), f"{value['lat']},{value['lng']}"
@@ -219,39 +225,26 @@ def resolve_location(value):
         row = hrows[0] if hrows else None
     if row:
         return row["latitude"], row["longitude"], row["n"]
-    if text.lower() in _geocode_cache:
-        return _geocode_cache[text.lower()]
-    try:
-        r = requests.get("https://nominatim.openstreetmap.org/search",
-                         params={"q": f"{text}, Varanasi, India", "format": "json", "limit": 1},
-                         headers={"User-Agent": "varanasi-trip-planner/1.0 (student project)"}, timeout=8)
-        r.raise_for_status()
-        res = r.json()
-    except Exception:
-        raise ApiError(f"Could not look up '{text}' (geocoding service unavailable). "
-                       'Send coordinates as {"lat":..,"lng":..} instead.', 503)
-    if not res:
-        raise ApiError(f"Could not find a location for '{text}'.", 400)
-    out = (float(res[0]["lat"]), float(res[0]["lon"]), text)
-    _geocode_cache[text.lower()] = out
-    return out
+    raise ApiError(f"'{text}' is not a stored location. Choose a place from the location suggestions.", 400)
 
 
 # ------------------------------------------------------------ planning
 def _call_planner(trip, places):
     """Call generate_itinerary(trip, places, use_osrm, include_geometry) from itenary_logic.py."""
     try:
-        return planner_module.generate_itinerary(trip, places, use_osrm=True, include_geometry=True)
+        return planner_module.generate_itinerary(trip, places, use_osrm=False, include_geometry=False)
     except ValueError as exc:                      # planner's own validation messages -> HTTP 400
         raise ApiError(str(exc), 400)
 
 
 def _near(rows, pts, limit=5):
-    if pts:
-        clat, clon = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
-        rows.sort(key=lambda r: planner_module.haversine_km((clat, clon), (r["latitude"], r["longitude"]))
-                  if r.get("latitude") is not None else 1e9)
-    return rows[:limit]
+    if not pts:
+        return []
+    located = [dict(r) for r in rows if r.get("latitude") is not None and r.get("longitude") is not None]
+    for r in located:
+        r["distance_to_stop_km"] = round(min(planner_module.haversine_km(
+            pt, (r["latitude"], r["longitude"])) for pt in pts), 2)
+    return sorted(located, key=lambda r: r["distance_to_stop_km"])[:limit]
 
 
 def plan_trip(params):
@@ -298,6 +291,7 @@ def plan_trip(params):
                               (f"%{key}%",))
     else:
         foods = db.safe_query("SELECT * FROM food_places")
+    foods = [f for f in foods if f.get("budget_tier") == params["food_budget"]]
     hotels_all = db.safe_query("SELECT * FROM hotels" + (" WHERE category = %s" if params["stay_preference"] != "none" else ""),
                                (params["stay_preference"],) if params["stay_preference"] != "none" else ())
     prices = [f["price_range_per_person"] for f in foods if f.get("price_range_per_person") is not None]
@@ -316,6 +310,9 @@ def plan_trip(params):
             "fuel_price": params["fuel_price"], "food_per_day": food_per_day,
             "hotel_per_night": hotel_per_night, "travel_time_factor": params["travel_time_factor"],
             "selected_places": ids, "compulsory_places": params["compulsory_ids"]}
+    trip["max_stops_per_day"] = {"relaxed": 2, "normal": 3, "fast": None}[params["travel_pace"]]
+    if params["travel_pace"] == "fast":
+        warnings.append("Packed pace allows more stops; four or more per day depends on opening hours, time and budget.")
     if params["start_date"]:
         trip["start_date"] = params["start_date"]      # (planner warns by itself if it is missing)
 
@@ -338,9 +335,9 @@ def plan_trip(params):
     response["food_suggestions"] = _near(foods, sched_pts)
     hotels = hotels_all if params["stay_preference"] != "none" else db.safe_query("SELECT * FROM hotels")
     response["hotel_suggestions"] = _near(hotels, sched_pts)
-    response["resources"] = db.safe_query(
+    response["resources"] = [r for r in db.safe_query(
         f"SELECT r.*, p.place_name FROM travel_resources r JOIN places p ON p.place_id = r.place_id "
-        f"WHERE r.place_id IN ({marks})", ids)
+        f"WHERE r.place_id IN ({marks})", ids) if r["place_id"] in sched_ids]
     try:
         response["trip_id"] = db.save_trip(params, response["itinerary_by_day"], set(params["compulsory_ids"]), ids)
     except Exception:
@@ -355,6 +352,18 @@ def plan_trip(params):
 @app.get("/api/health")
 def health():
     return jsonify({"status": "ok"})
+
+
+@app.get("/")
+def home():
+    return send_from_directory(os.path.join(app.root_path, "frontend"), "index.html")
+
+
+@app.get("/<path:filename>")
+def frontend_file(filename):
+    if filename.startswith("api/"):
+        raise ApiError("Endpoint not found.", 404)
+    return send_from_directory(os.path.join(app.root_path, "frontend"), filename)
 
 
 @app.get("/api/regions")
@@ -454,6 +463,4 @@ def recalculate():
 
 
 if __name__ == "__main__":
-    for problem in db.init_db():
-        print("WARNING creating extra tables:", problem)
     app.run(debug=True, host="127.0.0.1", port=5000)

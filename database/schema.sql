@@ -306,7 +306,7 @@ VALUES
     NULL,
     45,
     250.00,
-    NULL
+    'dhamek.jpg'
 ),
 
 (
@@ -321,7 +321,7 @@ VALUES
     'Friday',
     60,
     5.00,
-    NULL
+    'sarmuseum.jpg'
 ),
 
 (
@@ -336,7 +336,7 @@ VALUES
     NULL,
     50,
     20.00,
-    NULL
+    'chauk.jpg'
 ),
 
 (
@@ -351,7 +351,7 @@ VALUES
     NULL,
     45,
     0.00,
-    NULL
+    'mulgandh.jpg'
 ),
 
 (
@@ -366,7 +366,7 @@ VALUES
     NULL,
     45,
     40.00,
-    NULL
+    'deer.jpg'
 ),
 
 (
@@ -381,7 +381,7 @@ VALUES
     '18:00:00',
     60,
     250.00,
-    NULL
+    'archruins.jpeg'
 ),
 
 (
@@ -604,3 +604,285 @@ UPDATE places SET opening_time = '08:00:00', closing_time = '18:00:00', closed_d
 UPDATE places SET opening_time = '08:30:00', closing_time = '17:00:00' WHERE place_name='Tibetan Buddhist Temple';
 
 UPDATE places SET region_name='BHU and Southern Varanasi',category='cultural & leisure' WHERE place_name='Assi Ghat';
+
+-- ------------------------------------------------------------
+-- REGIONS
+-- (MySQL: use INSERT IGNORE instead of INSERT OR IGNORE,
+--  and make region_name UNIQUE)
+-- ------------------------------------------------------------
+
+INSERT INTO places (
+    place_name,
+    region_name,
+    category,
+    speciality_description,
+    latitude,
+    longitude,
+    opening_time,
+    closing_time,
+    closed_days,
+    visit_duration_minutes,
+    entry_fee,
+    image_url
+)
+VALUES
+
+
+(
+    'Rajdari Waterfall',
+    'Chandauli',
+    'Nature',
+    'Scenic waterfall inside the Chandraprabha Wildlife Sanctuary, best seen during and after the monsoon.',
+    24.9468900,
+    83.168660,          -- APPROX
+    '06:00:00',
+    '18:00:00',
+    NULL,
+    130,
+    0.00,               -- fee not confirmed
+    'rajdari.jpg'
+),
+
+(
+    'Devdari Waterfall',
+    'Chandauli',
+    'Nature',
+    'Waterfall close to Rajdari, usually visited together with it.',
+    24.960000,
+    83.172590,          -- APPROX (about 700 m from Rajdari)
+    NULL,
+    NULL,
+    NULL,
+    110,
+    0.00,
+    'devdari.jpg'
+),
+
+(
+    'Chandraprabha Wildlife Sanctuary',
+    'Chandauli',
+    'Nature',
+    'Forest sanctuary of about 78 square km with waterfalls, viewpoints, picnic spots and wildlife.',
+    24.946000,
+    83.169900,          -- centre of the sanctuary boundary box
+    '09:00:00',
+    '17:00:00',
+    NULL,
+    210,
+    3000.00,
+    'chandrawild.jpg'
+),
+
+(
+    'Chandraprabha Waterfall',
+    'Chandauli',
+    'Nature',
+    'Waterfall on the Chandraprabha river within the sanctuary area near Naugarh.',
+    24.940000,
+    83.090000,          -- APPROX, LOW CONFIDENCE
+    '08:00:00',
+    '16:00:00',
+    NULL,
+    120,
+    0.00,
+    'chandrawater.jpg'
+),
+
+(
+    'Aurvatand Waterfall',
+    'Chandauli',
+    'Nature',
+    'Waterfall on the Karmanasa river, with prehistoric rock paintings in nearby caves.',
+    24.865668,
+    83.353236,          -- APPROX, LOW CONFIDENCE
+    NULL,
+    NULL,
+    NULL,
+    110,
+    0.00,
+    'auravtand.jpg'
+),
+
+(
+    'Karmnasha Waterfall',
+    'Chandauli',
+    'Nature',
+    'Waterfall on the Karmanasa river in the eastern part of Chandauli district.',
+    24.990000,
+    83.360000,          -- APPROX, LOW CONFIDENCE
+    NULL,
+    NULL,
+    NULL,
+    100,
+    0.00,
+    'karmnasha.jpg'
+),
+
+(
+    'Latif Shah Dam',
+    'Chandauli',
+    'Nature',
+    'Dam and reservoir near Naugarh, popular for quiet views and picnics.',
+    24.945000,
+    83.240000,          -- APPROX, LOW CONFIDENCE
+    '07:00:00',
+    '20:00:00',
+    NULL,
+    45,
+    0.00,
+    'latif.jpg'
+),
+
+
+
+
+(
+    'Lakhaniya Dari Waterfall',
+    'Mirzapur and Chunar',
+    'Nature',
+    'Waterfall surrounded by greenery in the Chunar area, at its best in the monsoon.',
+    24.95860,
+    83.00890,          -- APPROX, LOW CONFIDENCE
+    '09:00:00',
+    '17:00:00',
+    NULL,
+    150,
+    0.00,
+    'lakhaniya.jpeg'
+),
+
+(
+    'Vindham Falls (Wyndham Falls)',
+    'Mirzapur and Chunar',
+    'Nature',
+    'Waterfall near Mirzapur with a small park and ancient rock paintings in nearby caves.',
+    25.030000,
+    82.610000,          -- APPROX (about 14 km from Mirzapur)
+    '06:00:00',
+    '18:00:00',
+    NULL,
+    110,
+    0.00,
+    'vindhamfalls.jpg'
+),
+
+(
+    'Tanda Falls',
+    'Mirzapur and Chunar',
+    'Nature',
+    'Waterfall in the Vindhya hills near Mirzapur, with rocky terrain around it.',
+    25.0579000,
+    82.700000,          -- APPROX, LOW CONFIDENCE
+    NULL,
+    NULL,
+    NULL,
+    110,
+    0.00,
+    'tanda.jpg'
+),
+
+(
+    'Chunar Fort',
+    'Mirzapur and Chunar',
+    'Historical',
+    'Historic sandstone hill fort on the Ganges, linked with Sher Shah Suri, the Mughals and the British.',
+    25.125500,
+    82.874700,          -- VERIFIED (Wikipedia)
+    '09:00:00',
+    '17:00:00',
+    NULL,
+    90,
+    0.00,
+    'chunar.jpg'
+),
+
+(
+    'Sidh Nath Dari',
+    'Mirzapur and Chunar',
+    'Nature',
+    'Waterfall and picnic spot among the Vindhya hills near Chunar.',
+    24.964000,
+    82.821700,          -- APPROX, LOW CONFIDENCE
+    '06:00:00',
+    '19:00:00',
+    NULL,
+    90,
+    0.00,
+    'sidh.jpg'
+),
+
+(
+    'Jargo Dam',
+    'Mirzapur and Chunar',
+    'Nature',
+    'Dam and reservoir in the Chunar area, suited to a relaxed scenic stop.',
+    25.0256740,
+    82.880000,          -- APPROX, LOW CONFIDENCE
+    NULL,
+    NULL,
+    NULL,
+    60,
+    0.00,
+    'jargo.jpg'
+),
+
+(
+    'Vindhyachal Temple (Maa Vindhyavasini)',
+    'Mirzapur and Chunar',
+    'Spiritual',
+    'Major Shakti Peeth dedicated to Goddess Vindhyavasini, on the banks of the Ganges.',
+    25.315378,
+    82.948117,          -- from a temple listing, check on the map
+    '05:30:00',
+    '21:30:00',         -- from a temple listing, confirm locally
+    NULL,
+    60,
+    0.00,
+    'vindhyachal.jpg'
+),
+
+(
+    'Ashtabhuja Temple',
+    'Mirzapur and Chunar',
+    'Spiritual',
+    'Hilltop temple of Goddess Ashtabhuja (Saraswati), part of the Vindhyachal Trikon circuit.',
+    25.125000,
+    82.968000,          -- APPROX, LOW CONFIDENCE
+    '04:00:00',
+    '21:00:00',
+    NULL,
+    45,
+    0.00,
+    'ashta.jpg'
+),
+
+(
+    'Kali Khoh Temple',
+    'Mirzapur and Chunar',
+    'Spiritual',
+    'Ancient cave temple dedicated to Goddess Kali, part of the Vindhyachal Trikon circuit.',
+    25.154000,
+    82.495000,          -- APPROX, LOW CONFIDENCE
+    '04:00:00',
+    '21:00:00',
+    NULL,
+    30,
+    0.00,
+    'kali_khoh.jpeg'
+);
+
+UPDATE places SET region_id = 6 WHERE region_name = 'Chandauli';
+UPDATE places SET region_id = 7 WHERE region_name = 'Mirzapur and Chunar';
+
+UPDATE places SET image_url = 'dhamek.jpg'         WHERE place_name = 'Dhamek Stupa';
+UPDATE places SET image_url = 'sarmuseum.jpg'       WHERE place_name = 'Sarnath Archaeological Museum';
+UPDATE places SET image_url = 'chauk.jpg'     WHERE place_name = 'Chaukhandi Stupa';
+UPDATE places SET image_url = 'mulagandh.jpg'      WHERE place_name = 'Mulagandha Kuti Vihara';
+UPDATE places SET image_url = 'deer.jpg'            WHERE place_name = 'Sarnath Deer Park';
+UPDATE places SET image_url = 'archruins.jpeg'        WHERE place_name = 'Sarnath Archaeological Ruins';
+UPDATE places SET image_url = 'thai.jpg'          WHERE place_name = 'Thai Temple and Monastery';
+UPDATE places SET image_url = 'giant_budha.jpeg'         WHERE place_name = 'Giant Buddha Statue';
+UPDATE places SET image_url = 'chinese.jpeg'       WHERE place_name = 'Chinese Buddhist Temple';
+UPDATE places SET image_url = 'tibetan.jpg'       WHERE place_name = 'Tibetan Buddhist Temple';
+UPDATE places SET image_url = 'japanese.jpg'  WHERE place_name = 'Jain Temple, Sarnath';
+UPDATE places SET image_url = 'wisdom_garden.jpeg' WHERE place_name = 'Garden of Spiritual Wisdom';

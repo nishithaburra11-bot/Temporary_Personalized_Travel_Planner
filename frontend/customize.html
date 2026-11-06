@@ -199,7 +199,7 @@
         try {
             selectedIds = JSON.parse(localStorage.getItem("selected_places") || "[]").map(Number);
             const savedComp = JSON.parse(localStorage.getItem("compulsory_places") || "[]");
-            if (Array.isArray(savedComp)) savedComp.forEach(id => compulsorySet.add(Number(id)));
+            if (Array.isArray(savedComp)) savedComp.forEach(id => selectedIds.includes(Number(id)) && compulsorySet.add(Number(id)));
         } catch (e) {}
 
         const container = document.getElementById("listContainer");
@@ -208,6 +208,7 @@
         function updateStorage() {
             try {
                 localStorage.setItem("selected_places", JSON.stringify(selectedIds));
+                localStorage.removeItem("trip_result");
                 localStorage.setItem("compulsory_places", JSON.stringify(Array.from(compulsorySet)));
             } catch (e) {}
             planBtn.disabled = selectedIds.length === 0;
@@ -277,12 +278,15 @@
         async function init() {
             try {
                 const res = await fetch(`${API}/api/places`);
-                if (res.ok) {
-                    const data = await res.json();
-                    placesData = data.places || [];
-                }
+                const data = await res.json();
+                if (!res.ok || !Array.isArray(data.places)) throw new Error(data.error || "Unable to load places.");
+                placesData = data.places;
+                selectedIds = selectedIds.filter(id => placesData.some(p => Number(p.place_id) === id));
+                compulsorySet = new Set([...compulsorySet].filter(id => selectedIds.includes(id)));
             } catch (err) {
-                console.warn("Could not fetch place details:", err);
+                container.textContent = "Unable to load place details. Check the backend and reload this page.";
+                planBtn.disabled = true;
+                return;
             }
             renderList();
         }

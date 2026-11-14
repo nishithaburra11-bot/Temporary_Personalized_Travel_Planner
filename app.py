@@ -247,6 +247,85 @@ def _near(rows, pts, limit=5):
     return sorted(located, key=lambda r: r["distance_to_stop_km"])[:limit]
 
 
+def food_suggestions_by_day(days, foods, budget_tier, radius_km=3.0):
+    """Suggestions only: hours, meal time and detours do not alter the schedule."""
+    matching = [f for f in foods if f.get("budget_tier") == budget_tier]
+
+    def noon_distance(stop):
+        try:
+            arrival = sum(int(v) * scale for v, scale in zip(stop["arrival_time"].split(":"), (60, 1)))
+            departure = sum(int(v) * scale for v, scale in zip(stop["departure_time"].split(":"), (60, 1)))
+            return max(arrival - 13 * 60, 13 * 60 - departure, 0)
+        except (KeyError, TypeError, ValueError):
+            return float("inf")
+
+    groups = []
+    for index, day in enumerate(days, 1):
+        stops = [s for s in day.get("stops", [])
+                 if s.get("latitude") is not None and s.get("longitude") is not None]
+        lunch = min(stops, key=noon_distance) if stops else None
+        dinner = stops[-1] if stops else None
+        meals = []
+        for meal, anchor in (("Lunch", lunch), ("Dinner", dinner)):
+            candidates = _near(matching, [(anchor["latitude"], anchor["longitude"])], limit=len(matching)) if anchor else []
+            # Compare unrounded distances at the boundary; rounded values are display-only.
+            nearby = [f for f in candidates if planner_module.haversine_km(
+                (anchor["latitude"], anchor["longitude"]), (f["latitude"], f["longitude"])) <= radius_km][:3]
+            selection = nearby
+            mode = "nearby"
+            message = ""
+            if not anchor:
+                mode, message = "unavailable", "No scheduled stops for this day."
+            elif not nearby and candidates:
+                selection, mode = candidates[:5], "farther"
+                message = (f"No restaurants in your selected food tier are listed within an estimated {radius_km:g} km "
+                           "of this stop. Here are the closest available options farther away; allow extra travel time.")
+            elif not nearby:
+                selection = _near(foods, [(anchor["latitude"], anchor["longitude"])], limit=5)
+                mode = "other_tiers" if selection else "unavailable"
+                message = ("No restaurants with locations are listed in your selected food tier. "
+                           "Here are the closest available options from other tiers; check their estimated prices."
+                           if selection else "No restaurant locations are available in our current list.")
+            meals.append({"meal": meal, "anchor_place_id": anchor.get("place_id") if anchor else None,
+                          "anchor_place_name": anchor.get("place_name") if anchor else None,
+                          "restaurants": selection, "selection_mode": mode, "message": message})
+        groups.append({"day": day.get("day", index), "radius_km": radius_km, "meals": meals})
+    return groups
+
+
+def hotel_suggestions_by_day(days, hotels, category, radius_km=3.0):
+    """Daily alternatives, not bookings or changes to the itinerary's endpoints."""
+    if category == "none":
+        return []
+    matching = [h for h in hotels if h.get("category") == category]
+    groups = []
+    for index, day in enumerate(days, 1):
+        located = [s for s in day.get("stops", [])
+                   if s.get("latitude") is not None and s.get("longitude") is not None]
+        anchor = located[-1] if located else None
+        choices, mode, message = [], "unavailable", "No scheduled stops for this day."
+        if anchor:
+            point = (anchor["latitude"], anchor["longitude"])
+            candidates = _near(matching, [point], limit=len(matching))
+            choices = [h for h in candidates if planner_module.haversine_km(
+                point, (h["latitude"], h["longitude"])) <= radius_km][:3]
+            mode, message = "nearby", ""
+            if not choices and candidates:
+                choices, mode = candidates[:3], "farther"
+                message = (f"No stays in your selected comfort level are listed within an estimated {radius_km:g} km "
+                           "of this stop. These are the closest options farther away.")
+            elif not choices:
+                choices = _near(hotels, [point], limit=3)
+                mode = "other_tiers" if choices else "unavailable"
+                message = ("No located stays match your selected comfort level. These alternatives use other "
+                           "comfort levels; check their estimated rates." if choices
+                           else "No hotel locations are available in our current list.")
+        groups.append({"day": day.get("day", index), "optional_after_trip": index == len(days),
+                       "anchor_place_name": anchor.get("place_name") if anchor else None,
+                       "hotels": choices, "selection_mode": mode, "message": message})
+    return groups
+
+
 def plan_trip(params):
     ids = params["selected_ids"]
     marks = ",".join(["%s"] * len(ids))
@@ -291,9 +370,10 @@ def plan_trip(params):
                               (f"%{key}%",))
     else:
         foods = db.safe_query("SELECT * FROM food_places")
+    foods_all_tiers = foods
     foods = [f for f in foods if f.get("budget_tier") == params["food_budget"]]
-    hotels_all = db.safe_query("SELECT * FROM hotels" + (" WHERE category = %s" if params["stay_preference"] != "none" else ""),
-                               (params["stay_preference"],) if params["stay_preference"] != "none" else ())
+    hotels_every_tier = db.safe_query("SELECT * FROM hotels")
+    hotels_all = [h for h in hotels_every_tier if h.get("category") == params["stay_preference"]]
     prices = [f["price_range_per_person"] for f in foods if f.get("price_range_per_person") is not None]
     food_per_day = (sum(prices) / len(prices)) * MEALS_PER_DAY * params["travelers"] if prices else 0.0
     hotel_prices = [h["price_per_night"] for h in hotels_all if h.get("price_per_night") is not None]
@@ -333,8 +413,12 @@ def plan_trip(params):
     response["start"] = {"label": s_label, "lat": s_lat, "lng": s_lon}
     response["end"] = {"label": e_label, "lat": e_lat, "lng": e_lon}
     response["food_suggestions"] = _near(foods, sched_pts)
-    hotels = hotels_all if params["stay_preference"] != "none" else db.safe_query("SELECT * FROM hotels")
+    response["food_suggestions_by_day"] = food_suggestions_by_day(
+        response["itinerary_by_day"], foods_all_tiers, params["food_budget"])
+    hotels = hotels_all if params["stay_preference"] != "none" else hotels_every_tier
     response["hotel_suggestions"] = _near(hotels, sched_pts)
+    response["hotel_suggestions_by_day"] = hotel_suggestions_by_day(
+        response["itinerary_by_day"], hotels_every_tier, params["stay_preference"])
     response["resources"] = [r for r in db.safe_query(
         f"SELECT r.*, p.place_name FROM travel_resources r JOIN places p ON p.place_id = r.place_id "
         f"WHERE r.place_id IN ({marks})", ids) if r["place_id"] in sched_ids]

@@ -78,3 +78,13 @@ CREATE TABLE IF NOT EXISTS itinerary_items (
 ) ENGINE=InnoDB;
 SELECT * FROM places;
 SELECT * FROM food_places;
+SELECT * FROM hotels;
+USE personalized_travel_planner;
+ALTER TABLE hotels DROP COLUMN facilities;
+-- REVIEW BEFORE RUNNING. Not executed by Codex.
+ALTER TABLE hotels DROP COLUMN source_checked_date ;
+
+-- Optional: run separately only if you also want to remove this unused research field.
+-- ALTER TABLE hotels DROP COLUMN source_checked_date;
+
+

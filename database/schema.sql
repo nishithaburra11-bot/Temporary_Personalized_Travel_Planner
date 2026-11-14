@@ -885,4 +885,11 @@ UPDATE places SET image_url = 'giant_budha.jpeg'         WHERE place_name = 'Gia
 UPDATE places SET image_url = 'chinese.jpeg'       WHERE place_name = 'Chinese Buddhist Temple';
 UPDATE places SET image_url = 'tibetan.jpg'       WHERE place_name = 'Tibetan Buddhist Temple';
 UPDATE places SET image_url = 'japanese.jpg'  WHERE place_name = 'Jain Temple, Sarnath';
-UPDATE places SET image_url = 'wisdom_garden.jpeg' WHERE place_name = 'Garden of Spiritual Wisdom';
+UPDATE places SET image_url = 'wisdom_garden.jpeg' WHERE place_name = 'Garden of Spiritual Wisdom';jpeg;
+UPDATE places SET entry_fee=200.00 WHERE image_url='ramnagar_museum.jpeg';
+
+ALTER TABLE food_places DROP COLUMN cuisine,
+    DROP COLUMN dietary_options,
+    DROP COLUMN source_url,
+    DROP COLUMN source_checked_date;
+

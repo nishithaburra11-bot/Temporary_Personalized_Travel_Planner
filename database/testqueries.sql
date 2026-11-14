@@ -8,3 +8,5 @@ SELECT * FROM places WHERE place_name='Assi ghat';
 
 SELECT DISTINCT category FROM places ;
 SHOW TABLES;
+
+SELECT * FROM food_places;

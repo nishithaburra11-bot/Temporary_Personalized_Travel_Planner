@@ -69,11 +69,135 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(backend._near(rows, [(25.3, 83)])[0]["name"], "near")
         self.assertEqual(backend._near(rows, []), [])
 
+    def test_day_meal_food_matching(self):
+        import copy
+        def stop(name, lat, arrival, departure):
+            return dict(place_id=name, place_name=name, latitude=lat, longitude=83,
+                        arrival_time=arrival, departure_time=departure)
+        days = [dict(day=1, stops=[stop("morning", 25.2, "09:00", "10:00"),
+                                  stop("midday", 25.3, "12:00", "14:00"),
+                                  stop("evening", 25.4, "16:00", "17:00")]),
+                dict(day=2, stops=[stop("next day", 25.5, "12:00", "14:00")]),
+                dict(day=3, stops=[])]
+        foods = [dict(name=str(lat), latitude=lat, longitude=83, budget_tier="standard",
+                      opening_hours="Closed (display only)") for lat in (25.2, 25.3, 25.4, 25.5)]
+        foods += [dict(name="wrong tier", latitude=25.3, longitude=83, budget_tier="premium"),
+                  dict(name="unknown location", budget_tier="standard")]
+        original = copy.deepcopy((days, foods))
+        result = backend.food_suggestions_by_day(days, foods, "standard")
+        self.assertEqual(result[0]["meals"][0]["anchor_place_name"], "midday")
+        self.assertEqual(result[0]["meals"][0]["restaurants"][0]["name"], "25.3")
+        self.assertEqual(result[0]["meals"][1]["restaurants"][0]["name"], "25.4")
+        self.assertEqual(result[1]["meals"][0]["restaurants"][0]["name"], "25.5")
+        self.assertEqual(len(result[0]["meals"][0]["restaurants"]), 1)
+        self.assertEqual(result[2]["meals"][0]["restaurants"], [])
+        self.assertTrue(result[2]["meals"][0]["message"])
+        self.assertEqual((days, foods), original)
+        fallback = backend.food_suggestions_by_day(days, foods, "budget")[0]["meals"][0]
+        self.assertEqual(fallback["selection_mode"], "other_tiers")
+        self.assertTrue(fallback["restaurants"])
+        far = backend.food_suggestions_by_day(days, [foods[3]], "standard")[0]["meals"][0]
+        self.assertEqual(far["selection_mode"], "farther")
+        self.assertGreater(far["restaurants"][0]["distance_to_stop_km"], 3)
+        self.assertIn("farther away", far["message"])
+        empty = backend.food_suggestions_by_day(days, [], "standard")[0]["meals"][0]
+        self.assertEqual(empty["selection_mode"], "unavailable")
+        self.assertEqual(empty["restaurants"], [])
+
+    def test_food_rendering_and_unchanged_styles(self):
+        html = (ROOT / "frontend/suggestions.html").read_text(encoding="utf-8")
+        script = re.findall(r"<script>(.*?)</script>", html, re.S)[0]
+        fixture = dict(food_suggestions_by_day=[dict(day=2, meals=[
+            dict(meal="Lunch", anchor_place_name="Temple", restaurants=[dict(
+                name="<img onerror=bad>", address="Test", price_range_per_person=200,
+                distance_to_stop_km=12, budget_tier="premium")], message="Closest options farther away", selection_mode="farther"),
+            dict(meal="Dinner", restaurants=[], message="No nearby option")])])
+        harness = "const grids = {}; const document = {getElementById: id => grids[id] = {innerHTML:''}};\n"
+        harness += "const localStorage = {getItem: () => " + json.dumps(json.dumps(fixture)) + "};\n"
+        harness += script + "\nconsole.log(grids.foodGrid.innerHTML);"
+        result = subprocess.run(["node"], input=harness, encoding="utf-8", capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Day 2", result.stdout)
+        self.assertIn("Closest options farther away", result.stdout)
+        self.assertIn("Distance from Temple", result.stdout)
+        self.assertIn("premium", result.stdout)
+        self.assertIn("Hours unavailable", result.stdout)
+        self.assertIn("No nearby option", result.stdout)
+        self.assertIn("&lt;img", result.stdout)
+        self.assertNotIn("<img onerror", result.stdout)
+
+    def test_daily_hotel_choices(self):
+        import copy
+        days = [dict(day=1, stops=[dict(place_name="A", latitude=25.3, longitude=83)]),
+                dict(day=2, stops=[dict(place_name="B", latitude=25.5, longitude=83)]),
+                dict(day=3, stops=[])]
+        hotels = [dict(hotel_name=str(i), latitude=25.3 + i * .001, longitude=83,
+                       category="normal", price_per_night=3000) for i in range(5)]
+        hotels += [dict(hotel_name="Luxury", latitude=25.5, longitude=83, category="luxury"),
+                   dict(hotel_name="Missing coordinates", category="budget")]
+        original = copy.deepcopy((days, hotels))
+        result = backend.hotel_suggestions_by_day(days, hotels, "normal")
+        self.assertEqual(len(result), 3)
+        self.assertEqual(len(result[0]["hotels"]), 3)
+        self.assertEqual(result[0]["hotels"][0]["hotel_name"], "0")
+        self.assertEqual(result[1]["selection_mode"], "farther")
+        self.assertTrue(all(h["category"] == "normal" for h in result[1]["hotels"]))
+        self.assertEqual(result[2]["hotels"], [])
+        self.assertTrue(result[2]["optional_after_trip"])
+        self.assertFalse(result[0]["optional_after_trip"])
+        self.assertEqual(backend.hotel_suggestions_by_day(days, hotels, "none"), [])
+        fallback = backend.hotel_suggestions_by_day(days, hotels, "budget")
+        self.assertEqual(fallback[0]["selection_mode"], "other_tiers")
+        self.assertEqual(backend.hotel_suggestions_by_day(days, [], "normal")[0]["selection_mode"], "unavailable")
+        self.assertEqual((days, hotels), original)
+
+    def test_hotel_sql_draft_and_api_without_inserting(self):
+        # Parse VALUES as literals; never execute the supplied SQL against any database.
+        sql = (ROOT / "database/insert_hotels_2026_11_09.sql").read_text(encoding="utf-8")
+        values = re.findall(r"\(\n    '[\s\S]*?\n\)", sql)
+        records = [ast.literal_eval(v.replace("NULL", "None")) for v in values]
+        self.assertEqual(len(records), 36)
+        self.assertEqual(len({r[0] for r in records}), 36)
+        fields = ["hotel_name", "address", "latitude", "longitude", "category", "price_per_night",
+                  "official_booking_url"]
+        hotels = [dict(zip(fields, r)) for r in records]
+        for h in hotels:
+            self.assertLessEqual(len(h["hotel_name"]), 150)
+            self.assertLessEqual(len(h["address"]), 255)
+            price = h["price_per_night"]
+            self.assertEqual(h["category"], "budget" if price <= 2000 else "normal" if price <= 5000 else "luxury")
+            self.assertTrue(24 < h["latitude"] < 26 and 82 < h["longitude"] < 84)
+        place = dict(place_id=1, place_name="Demo stop", latitude=25.3, longitude=83,
+                     opening_time="09:00", closing_time="18:00", visit_duration_minutes=60, entry_fee=10)
+        payload = dict(days=2, hours_per_day=8, budget=50000,
+                       start={"lat":25.3,"lng":83}, end={"lat":25.3,"lng":83},
+                       selected_places=[1], compulsory_places=[1], stay_preference="normal")
+        with patch.object(backend.db, "query", return_value=[place]), \
+             patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: hotels if sql == "SELECT * FROM hotels" else []), \
+             patch.object(backend.db, "save_trip", return_value=None):
+            response = self.client.post("/api/trip", json=payload)
+        self.assertEqual(response.status_code, 200, response.get_json())
+        result = response.get_json()
+        self.assertEqual(len(result["hotel_suggestions_by_day"]), 2)
+        self.assertTrue(result["hotel_suggestions_by_day"][0]["hotels"])
+        html = (ROOT / "frontend/suggestions.html").read_text(encoding="utf-8")
+        script = re.findall(r"<script>(.*?)</script>", html, re.S)[0]
+        harness = "const grids={}; const document={getElementById:id=>grids[id]={innerHTML:''}};\n"
+        harness += "const localStorage={getItem:()=>" + json.dumps(json.dumps(result)) + "};\n"
+        harness += script + "\nconsole.log(grids.hotelsGrid.innerHTML);"
+        rendered = subprocess.run(["node"], input=harness, encoding="utf-8", capture_output=True)
+        self.assertEqual(rendered.returncode, 0, rendered.stderr)
+        self.assertIn("Day 1", rendered.stdout)
+        self.assertIn("Comfort", rendered.stdout)
+        self.assertIn("/room/night", rendered.stdout)
+
     @unittest.skipUnless(LIVE, "Pass --live to read the actual database")
     def test_live_database_api_images_and_planning(self):
         def fingerprint():
             return hashlib.sha256(json.dumps(backend.db.query("SELECT * FROM places ORDER BY place_id"), sort_keys=True).encode()).hexdigest()
         before = fingerprint()
+        food_before = backend.db.query("SELECT * FROM food_places ORDER BY food_place_id")
+        hotels_before = backend.db.query("SELECT * FROM hotels ORDER BY hotel_id")
         regions = self.client.get("/api/regions").get_json()["regions"]
         self.assertGreaterEqual(len(regions), 2)
         names = [r["region_name"] for r in regions[:2]]
@@ -101,9 +225,20 @@ class IntegrationTests(unittest.TestCase):
             self.assertTrue(result["all_compulsory_scheduled"])
             self.assertTrue(all(len(d["stops"]) <= 2 for d in result["itinerary_by_day"]))
             self.assertTrue(result["excluded_places"])
+            self.assertEqual(len(result["food_suggestions_by_day"]), 2)
+            for day in result["food_suggestions_by_day"]:
+                for meal in day["meals"]:
+                    self.assertLessEqual(len(meal["restaurants"]), 5)
+                    for food in meal["restaurants"]:
+                        if meal["selection_mode"] != "other_tiers":
+                            self.assertEqual(food["budget_tier"], "standard")
+                        if meal["selection_mode"] == "nearby":
+                            self.assertLessEqual(food["distance_to_stop_km"], 3)
             payload["start"] = "Unknown location test"
             self.assertEqual(self.client.post("/api/trip", json=payload).status_code, 400)
         self.assertEqual(fingerprint(), before)
+        self.assertEqual(backend.db.query("SELECT * FROM food_places ORDER BY food_place_id"), food_before)
+        self.assertEqual(backend.db.query("SELECT * FROM hotels ORDER BY hotel_id"), hotels_before)
         print(f"Live checks: {len(all_rows)} places, {len(regions)} regions, {len(mapped)} mapped images; places unchanged.")
         print("Image gaps:", [(r["place_id"], r["image_url"]) for r in all_rows if r not in mapped])
         for table in ("hotels", "food_places", "travel_resources"):

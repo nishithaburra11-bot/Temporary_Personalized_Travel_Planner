@@ -1,135 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+    <script src="planning-state.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ayan | Your Compass to the Perfect Trip</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+    <script src="destinations.js" defer></script>
     <style>
-        body {
-            background-color: #FFF8E7;
-            color: #3B2A1A;
-            font-family: Georgia, serif;
-            margin: 0;
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #FFF8E7; color: #3B2A1A; font-family: Georgia, serif; }
+        main.dest-container { max-width: none; width: 100%; margin: 0; padding: 18px clamp(32px, 5vw, 96px) 20px; }
+        .destination-heading { display: flex; align-items: center; justify-content: flex-start; gap: 24px; margin-bottom: 18px; }
+        h1 { margin: 0; color: #7A3E00; font-size: 32px; }
+        .destination-heading h1 { flex: 0 1 52%; padding-left: calc(max(0px, (100% - 1200px) / 2) + 21px); }
+        .destination-picker { flex: 0 1 380px; }
+        .destination-picker label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+        #destSelect { width: 380px; max-width: 100%; height: 52px; margin: 0; padding: 10px 18px; border: 2px solid #B45F06; border-radius: 8px; background: #FFF0C2; color: #3B2A1A; font: 18px Georgia, serif; text-align: left; cursor: pointer; }
+        #destSelect:focus-visible, .next-btn:focus-visible { outline: 3px solid #0a8f55; outline-offset: 3px; }
+        #destInfo { width: 100%; max-width: 1200px; margin-inline: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto clamp(130px, 22vh, 190px) auto; gap: 18px 28px; align-items: center; }
+        #destInfo.hidden { display: none; }
+        .city { grid-column: 1 / 3; grid-row: 1; }
+        .image-right { grid-column: 3; grid-row: 1 / 3; align-self: stretch; max-height: 272px; }
+        .image-left { grid-column: 1; grid-row: 2; height: 100%; }
+        .go { grid-column: 2; grid-row: 2; text-align: center; }
+        .culture { grid-column: 1 / 3; grid-row: 3; }
+        .arts { grid-column: 3; grid-row: 3; }
+        .text-section { border-left: 3px solid #e8c27c; padding-left: 18px; }
+        .text-section h2 { margin: 0 0 8px; color: #7A3E00; font-size: 22px; line-height: 1.2; }
+        .culture, .arts { align-self: start; }
+        .city p, .culture p { max-width: 32rem; }
+        .text-section p { margin: 0; font-size: 16px; line-height: 1.5; text-align: left; }
+        .picture { min-width: 0; min-height: 0; position: relative; overflow: hidden; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+        #destInfo .picture img { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; object-fit: cover; border-radius: 12px; }
+        .next-btn { display: inline-block; padding: 12px 28px; background: #B45F06; color: #fff; text-decoration: none; border-radius: 8px; font-size: 16px; }
+        .next-btn:hover { background: #7A3E00; }
+        @media (min-width: 1000px) and (max-height: 800px) {
+            main.dest-container { padding-top: 12px; padding-bottom: 12px; }
+            .destination-heading { margin-bottom: 12px; }
+            #destInfo { gap: 12px 24px; grid-template-rows: auto 130px auto; }
+            .text-section p { font-size: 15px; line-height: 1.4; }
         }
-
-        main.dest-container {
-            max-width: 1400px !important;
-            width: 100%;
-            margin: 20px auto;
-            padding: 0 30px;
-            box-sizing: border-box;
-        }
-
-        #destSelect {
-            display: block;
-            margin: 0 auto 25px;
-        }
-
-        #destInfo {
-            display: grid;
-            grid-template-columns: 1fr 1.1fr;
-            /* left text, right images */
-            gap: 40px;
-            align-items: start;
-        }
-
-        #destInfo.hidden {
-            display: none;
-        }
-
-        .text-section h2 {
-            margin: 0 0 12px;
-            font-size: 32px;
-            color: #7A3E00;
-        }
-
-        .text-section h3 {
-            margin: 0 0 8px;
-            color: #B45F06;
-        }
-
-        .text-section p {
-            margin: 0 0 16px;
-            /* paras madhya gap */
-            line-height: 1.6;
-            font-size: 16px;
-            text-align: left;
-        }
-
-        .image-section {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            position: sticky;
-            top: 20px;
-        }
-
-        .image-section img {
-            width: 100%;
-            height: auto;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .next-btn {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 12px 28px;
-            background: #B45F06;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-
-        .next-btn:hover {
-            background: #7A3E00;
-        }
-
-        @media (max-width: 800px) {
-            #destInfo {
-                grid-template-columns: 1fr;
-            }
-
-            .image-section {
-                position: static;
-            }
+        @media (max-width: 900px) {
+            #topbar { flex-wrap: wrap; gap: 12px; }
+            #menu { flex-wrap: wrap; gap: 12px 20px; }
+            .destination-heading { flex-wrap: wrap; }
+            .destination-heading h1 { flex-basis: 100%; }
+            .destination-picker { max-width: 100%; }
+            #destInfo { grid-template-columns: 1fr; grid-template-rows: none; }
+            .city, .image-right, .image-left, .go, .culture, .arts { grid-column: 1; grid-row: auto; }
+            .picture { height: 220px; }
+            main.dest-container { padding: 18px 20px; }
         }
     </style>
 </head>
-
 <body>
     <header id="topbar">
-        <a href="index.html" class="logo">
-            <img src="ayan_main.svg" alt="Ayan">
-        </a>
-        <nav id="menu"></nav>
+        <a href="index.html" class="logo"><img src="ayan_main.svg" alt="Ayan"></a>
+        <nav id="menu" aria-label="Main"></nav>
     </header>
-
     <main class="dest-container">
-        <select id="destSelect">
-            <option value="">-- Select a destination --</option>
-            <option value="varanasi">Varanasi</option>
-        </select>
-
-        <section id="destInfo" class="hidden">
-            <div class="text-section">
-                <h2 id="destName"></h2>
-                <div id="destHistory"></div>
-                <a id="nextBtn" href="regions.html" class="next-btn">Explore Regions &rarr;</a>
+        <div class="destination-heading">
+            <h1 id="destName">Choose a destination</h1>
+            <div class="destination-picker">
+                <label for="destSelect">Choose a destination</label>
+                <select id="destSelect">
+                    <option value="">-- Select a destination --</option>
+                    <option value="varanasi">Varanasi</option>
+                </select>
             </div>
-
-            <div class="image-section">
-                <img id="destImg" alt="">
-                <img id="destImg2" alt="">
-            </div>
+        </div>
+        <section id="destInfo" class="hidden" aria-labelledby="destName">
+            <div class="text-section city"><h2>The City of Lights</h2><p id="cityText"></p></div>
+            <div class="picture image-right"><img id="destImg" src="destinations_1.png" alt="Varanasi and the Ganges"></div>
+            <div class="picture image-left"><img id="destImg2" src="destinations_2.png" alt="The ghats of Varanasi"></div>
+            <div class="go"><a href="regions.html" class="next-btn">Explore Regions &rarr;</a></div>
+            <div class="text-section culture"><h2>Culture and craft</h2><p id="cultureText"></p></div>
+            <div class="text-section arts"><h2>Festivals and the arts</h2><p id="artsText"></p></div>
         </section>
     </main>
-
-    <script src="destinations.js"></script>
 </body>
-
 </html>

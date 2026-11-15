@@ -138,7 +138,7 @@ class IntegrationTests(unittest.TestCase):
         original = copy.deepcopy((days, hotels))
         result = backend.hotel_suggestions_by_day(days, hotels, "normal")
         self.assertEqual(len(result), 3)
-        self.assertEqual(len(result[0]["hotels"]), 3)
+        self.assertEqual(len(result[0]["hotels"]), 5)
         self.assertEqual(result[0]["hotels"][0]["hotel_name"], "0")
         self.assertEqual(result[1]["selection_mode"], "farther")
         self.assertTrue(all(h["category"] == "normal" for h in result[1]["hotels"]))
@@ -191,6 +191,56 @@ class IntegrationTests(unittest.TestCase):
         self.assertIn("Comfort", rendered.stdout)
         self.assertIn("/room/night", rendered.stdout)
 
+    def test_costs_only_for_visiting_days(self):
+        places = [dict(place_id=i, place_name=f"Stop {i}", latitude=25.3, longitude=83,
+                       opening_time="00:00", closing_time="23:59",
+                       visit_duration_minutes=30, entry_fee=0) for i in (1, 2)]
+        trip = dict(days=8, hours_per_day=8, budget=200,
+                    start_coords=[25.3, 83], selected_places=[1, 2],
+                    compulsory_places=[1, 2], food_per_day=200, hotel_per_night=1000)
+        result = backend.planner_module.generate_itinerary(trip, places)
+        self.assertTrue(result["all_compulsory_scheduled"])
+        self.assertEqual(result["cost_breakdown"]["food"]["amount"], 200)
+        self.assertEqual(result["cost_breakdown"]["accommodation"]["amount"], 0)
+        trip.update(max_stops_per_day=1, budget=1400)
+        result = backend.planner_module.generate_itinerary(trip, places)
+        self.assertTrue(result["all_compulsory_scheduled"])
+        self.assertEqual(result["cost_breakdown"]["total"], 1400)
+        trip["budget"] = 1399
+        result = backend.planner_module.generate_itinerary(trip, places)
+        self.assertFalse(result["all_compulsory_scheduled"])
+        self.assertEqual(result["cost_breakdown"]["total"], 200)
+        trip["budget"] = 0
+        result = backend.planner_module.generate_itinerary(trip, places)
+        self.assertEqual(result["cost_breakdown"]["total"], 0)
+
+    def test_optional_endpoints_and_no_stay(self):
+        places = [dict(place_id=i, place_name=f"Stop {i}", latitude=25.3 + i * .001,
+                       longitude=83, opening_time="00:00", closing_time="23:59",
+                       visit_duration_minutes=30, entry_fee=0) for i in range(1, 4)]
+        hotels = [dict(hotel_name="Test hotel", category="normal", latitude=25.3,
+                       longitude=83, price_per_night=1000)]
+        payload = dict(days=2, hours_per_day=8, budget=10000, selected_places=[1, 2, 3],
+                       compulsory_places=[2], stay_preference="none", start="", end="")
+        for start, end in [("", ""), ({"lat":25.3,"lng":83}, ""),
+                           ("", {"lat":25.4,"lng":83})]:
+            with self.subTest(start=start, end=end), \
+                 patch.object(backend.db, "query", return_value=places), \
+                 patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: hotels if sql == "SELECT * FROM hotels" else []), \
+                 patch.object(backend.db, "save_trip", return_value=None):
+                response = self.client.post("/api/trip", json=dict(payload, start=start, end=end))
+                self.assertEqual(response.status_code, 200, response.get_json())
+                result = response.get_json()
+                self.assertEqual(result["cost_breakdown"]["accommodation"]["amount"], 0)
+                self.assertEqual(result["hotel_suggestions"], [])
+                self.assertEqual(result["hotel_suggestions_by_day"], [])
+                self.assertTrue(result["all_compulsory_scheduled"])
+                for key, supplied in [("start", start), ("end", end)]:
+                    if supplied:
+                        self.assertEqual(result[key]["lat"], supplied["lat"])
+                    else:
+                        self.assertIn(result[key]["label"], [p["place_name"] for p in places])
+
     @unittest.skipUnless(LIVE, "Pass --live to read the actual database")
     def test_live_database_api_images_and_planning(self):
         def fingerprint():
@@ -228,7 +278,7 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(len(result["food_suggestions_by_day"]), 2)
             for day in result["food_suggestions_by_day"]:
                 for meal in day["meals"]:
-                    self.assertLessEqual(len(meal["restaurants"]), 5)
+                    self.assertIsInstance(meal["restaurants"], list)
                     for food in meal["restaurants"]:
                         if meal["selection_mode"] != "other_tiers":
                             self.assertEqual(food["budget_tier"], "standard")

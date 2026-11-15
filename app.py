@@ -198,9 +198,6 @@ def validate_trip(data):
     p["start_date"] = data.get("start_date")
     p["selected_ids"] = _id_list(data, "selected_places", errors)
     p["compulsory_ids"] = _id_list(data, "compulsory_places", errors)
-    for key in ("start", "end"):
-        if not data.get(key):
-            errors.append(f"'{key}' is required (place name or {{lat, lng}}).")
     p["selected_ids"] = list(dict.fromkeys(p["selected_ids"] + p["compulsory_ids"]))
     if not p["selected_ids"]:
         errors.append("Select at least one place.")
@@ -270,18 +267,18 @@ def food_suggestions_by_day(days, foods, budget_tier, radius_km=3.0):
             candidates = _near(matching, [(anchor["latitude"], anchor["longitude"])], limit=len(matching)) if anchor else []
             # Compare unrounded distances at the boundary; rounded values are display-only.
             nearby = [f for f in candidates if planner_module.haversine_km(
-                (anchor["latitude"], anchor["longitude"]), (f["latitude"], f["longitude"])) <= radius_km][:3]
+                (anchor["latitude"], anchor["longitude"]), (f["latitude"], f["longitude"])) <= radius_km]
             selection = nearby
             mode = "nearby"
             message = ""
             if not anchor:
                 mode, message = "unavailable", "No scheduled stops for this day."
             elif not nearby and candidates:
-                selection, mode = candidates[:5], "farther"
+                selection, mode = candidates, "farther"
                 message = (f"No restaurants in your selected food tier are listed within an estimated {radius_km:g} km "
                            "of this stop. Here are the closest available options farther away; allow extra travel time.")
             elif not nearby:
-                selection = _near(foods, [(anchor["latitude"], anchor["longitude"])], limit=5)
+                selection = _near(foods, [(anchor["latitude"], anchor["longitude"])], limit=len(foods))
                 mode = "other_tiers" if selection else "unavailable"
                 message = ("No restaurants with locations are listed in your selected food tier. "
                            "Here are the closest available options from other tiers; check their estimated prices."
@@ -308,14 +305,14 @@ def hotel_suggestions_by_day(days, hotels, category, radius_km=3.0):
             point = (anchor["latitude"], anchor["longitude"])
             candidates = _near(matching, [point], limit=len(matching))
             choices = [h for h in candidates if planner_module.haversine_km(
-                point, (h["latitude"], h["longitude"])) <= radius_km][:3]
+                point, (h["latitude"], h["longitude"])) <= radius_km]
             mode, message = "nearby", ""
             if not choices and candidates:
-                choices, mode = candidates[:3], "farther"
+                choices, mode = candidates, "farther"
                 message = (f"No stays in your selected comfort level are listed within an estimated {radius_km:g} km "
                            "of this stop. These are the closest options farther away.")
             elif not choices:
-                choices = _near(hotels, [point], limit=3)
+                choices = _near(hotels, [point], limit=len(hotels))
                 mode = "other_tiers" if choices else "unavailable"
                 message = ("No located stays match your selected comfort level. These alternatives use other "
                            "comfort levels; check their estimated rates." if choices
@@ -334,12 +331,9 @@ def plan_trip(params):
     if missing:
         raise ApiError(f"Unknown place IDs: {missing}", 400)
 
-    warnings = []
     if params["transport"] == "public_transport":
         raise ApiError("Public-transport planning is unavailable: no verified Varanasi bus data has been "
                        "loaded. Choose 'own_vehicle' or 'mixed'.", 422)
-    if params["transport"] == "mixed":
-        warnings.append("No verified bus data is used: all legs are planned as road travel (own vehicle).")
 
     # clean the data + collect issues
     clean, issues = [], []
@@ -347,21 +341,19 @@ def plan_trip(params):
         nr, iss = normalize_place_row(r)
         clean.append(nr)
         issues += iss
-    no_hours = [r["place_name"] for r in clean if not r["opening_time"]]
-    if no_hours:
-        warnings.append(f"No opening hours stored for {len(no_hours)} place(s) ({', '.join(no_hours)}); "
-                        "they are treated as open all day. Verify before travelling.")
-    warnings += issues
     if params["travelers"] > 1:                    # planner has no 'travelers' field: scale fees here
         for r in clean:
             r["entry_fee"] = float(r.get("entry_fee") or 0) * params["travelers"]
-        warnings.append(f"Entry fees are multiplied by {params['travelers']} travelers.")
-    warnings.append("Entry fees come from the database without a verification date, so they are shown as "
-                    "estimates. A fee of 0 may also mean 'not collected yet'.")
 
-    s_lat, s_lon, s_label = resolve_location(params["raw"]["start"])
-    e_lat, e_lon, e_label = resolve_location(params["raw"]["end"])
-    params["start_label"], params["end_label"] = s_label, e_label
+    located = [p for p in clean if p.get("latitude") is not None and p.get("longitude") is not None]
+    if not located:
+        raise ApiError("Selected places have no usable coordinates.")
+    def endpoint(place):
+        return place["latitude"], place["longitude"], place["place_name"]
+    auto_start = not params["raw"].get("start")
+    auto_end = not params["raw"].get("end")
+    s_lat, s_lon, s_label = endpoint(located[0]) if auto_start else resolve_location(params["raw"]["start"])
+    e_lat, e_lon, e_label = endpoint(located[-1]) if auto_end else resolve_location(params["raw"]["end"])
 
     # food / hotel (tables may not exist yet - then they are simply not included)
     if params["food_preference"] != "any":
@@ -378,10 +370,6 @@ def plan_trip(params):
     food_per_day = (sum(prices) / len(prices)) * MEALS_PER_DAY * params["travelers"] if prices else 0.0
     hotel_prices = [h["price_per_night"] for h in hotels_all if h.get("price_per_night") is not None]
     hotel_per_night = min(hotel_prices) if (hotel_prices and params["stay_preference"] != "none") else 0.0
-    if not prices:
-        warnings.append("Food cost is not included (no priced food places in the database).")
-    if params["stay_preference"] != "none" and not hotel_prices and params["days"] > 1:
-        warnings.append("Accommodation cost is not included (no priced hotels in the database).")
 
     trip = {"days": params["days"], "hours_per_day": params["hours_per_day"], "budget": params["budget"],
             "start_coords": (s_lat, s_lon), "end_coords": (e_lat, e_lon),
@@ -391,17 +379,38 @@ def plan_trip(params):
             "hotel_per_night": hotel_per_night, "travel_time_factor": params["travel_time_factor"],
             "selected_places": ids, "compulsory_places": params["compulsory_ids"]}
     trip["max_stops_per_day"] = {"relaxed": 2, "normal": 3, "fast": None}[params["travel_pace"]]
-    if params["travel_pace"] == "fast":
-        warnings.append("Packed pace allows more stops; four or more per day depends on opening hours, time and budget.")
     if params["start_date"]:
         trip["start_date"] = params["start_date"]      # (planner warns by itself if it is missing)
 
-    result = _call_planner(trip, clean)
+    if auto_start or auto_end:
+        # Try a nearest-neighbour route from each possible start. Prefer plans
+        # that include compulsory stops, then more visits, then less travel.
+        starts = [endpoint(p) for p in located] if auto_start else [(s_lat, s_lon, s_label)]
+        best = None
+        for start in starts:
+            remaining = list(located)
+            point = start[:2]
+            while remaining:
+                last = min(remaining, key=lambda p: planner_module.haversine_km(point, endpoint(p)[:2]))
+                remaining.remove(last)
+                point = endpoint(last)[:2]
+            end = endpoint(last) if auto_end else (e_lat, e_lon, e_label)
+            candidate = dict(trip, start_coords=start[:2], end_coords=end[:2])
+            planned = _call_planner(candidate, clean)
+            stops = [stop for day in planned.get("itinerary_by_day", []) for stop in day.get("stops", [])]
+            scheduled = {stop.get("place_id") for stop in stops}
+            score = (len(scheduled.intersection(params["compulsory_ids"])), len(stops),
+                     -planned.get("total_distance_km", 0))
+            if best is None or score > best[0]:
+                best = (score, planned, start, end)
+        _, result, (s_lat, s_lon, s_label), (e_lat, e_lon, e_label) = best
+    else:
+        result = _call_planner(trip, clean)
+    params["start_label"], params["end_label"] = s_label, e_label
     response = dict(result)                         # pass the planner's own keys through untouched
     response.setdefault("itinerary_by_day", [])
     response.setdefault("excluded_places", [])
     response.setdefault("conflicts", [])
-    response["warnings"] = list(dict.fromkeys(warnings + list(result.get("warnings", []))))
     response.setdefault("success", not response["conflicts"])
 
     stops = [s for d in response["itinerary_by_day"] for s in d.get("stops", [])]
@@ -415,7 +424,7 @@ def plan_trip(params):
     response["food_suggestions"] = _near(foods, sched_pts)
     response["food_suggestions_by_day"] = food_suggestions_by_day(
         response["itinerary_by_day"], foods_all_tiers, params["food_budget"])
-    hotels = hotels_all if params["stay_preference"] != "none" else hotels_every_tier
+    hotels = hotels_all if params["stay_preference"] != "none" else []
     response["hotel_suggestions"] = _near(hotels, sched_pts)
     response["hotel_suggestions_by_day"] = hotel_suggestions_by_day(
         response["itinerary_by_day"], hotels_every_tier, params["stay_preference"])
@@ -427,8 +436,6 @@ def plan_trip(params):
     except Exception:
         app.logger.exception("Could not save trip")
         response["trip_id"] = None
-        response["warnings"].append("The trip could not be saved to the database (recalculation by trip_id "
-                                    "will not work; send the full payload instead).")
     return response
 
 

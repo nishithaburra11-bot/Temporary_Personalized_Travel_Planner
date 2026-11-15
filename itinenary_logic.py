@@ -117,7 +117,7 @@ def _parse_closed(value):
 # --------------------------------------------------------------------------
 # Travel-time functions. A travel function takes two (lat, lon) tuples and
 # returns (distance_km, minutes), or None if no reliable route exists.
-# They carry a `.source` attribute ("estimate" / "osrm") used for warnings.
+# They carry a `.source` attribute ("estimate" / "osrm") used to identify the routing method.
 # --------------------------------------------------------------------------
 
 def make_estimate_fn(speed_kmph=25.0, detour=1.3):
@@ -224,9 +224,6 @@ def add_route_geometry(result, base_url=DEFAULT_OSRM_URL, timeout=15, fetch_fn=N
         except Exception as exc:
             day["route_geometry"] = [[la, lo] for la, lo in pts]
             day["route_geometry_status"] = "straight_line_fallback"
-            result["warnings"].append(
-                f"Day {day['day']}: road geometry unavailable ({type(exc).__name__}); "
-                "straight lines are shown instead of roads.")
     return result
 
 
@@ -259,8 +256,8 @@ class Planner:
         self.time_factor = _num(trip, "travel_time_factor", 1.0, minimum=0.5)
         self.start = _coords(trip["start_coords"], "start_coords")
         self.end = _coords(trip.get("end_coords") or trip["start_coords"], "end_coords")
-        self.fixed_cost = (_num(trip, "food_per_day", 0) * self.days
-                           + _num(trip, "hotel_per_night", 0) * max(self.days - 1, 0))
+        self.food_per_day = _num(trip, "food_per_day", 0)
+        self.hotel_per_night = _num(trip, "hotel_per_night", 0)
         self.start_date = self._parse_date(trip.get("start_date"))
         self.travel_fn = travel_fn or make_estimate_fn()
         self.source = getattr(self.travel_fn, "source", "custom")
@@ -389,6 +386,10 @@ class Planner:
     def fuel(self, km):
         return km / self.mileage * self.fuel_price if self.own else 0.0
 
+    def hospitality_cost(self, visiting_days):
+        return (self.food_per_day * visiting_days
+                + self.hotel_per_night * max(visiting_days - 1, 0))
+
     # ---------- constraint check: simulate one day ----------
     def sim_day(self, d, pids):
         """Return (day_dict, None) if feasible, else (None, reason_code)."""
@@ -436,7 +437,8 @@ class Planner:
     def try_insert(self, pid, routes, sims):
         """Cheapest feasible (day, position) for pid. Returns (best, reasons, min_overshoot)."""
         p = self.places[pid]
-        total = sum(s["cost"] for s in sims) + self.fixed_cost
+        visiting_days = sum(bool(s["stops"]) for s in sims)
+        total = sum(s["cost"] for s in sims) + self.hospitality_cost(visiting_days)
         best, reasons, min_over, closed_days = None, set(), None, 0
         for d in range(self.days):
             wd = self.weekday(d)
@@ -449,7 +451,10 @@ class Planner:
                 if res is None:
                     reasons.add(why)
                     continue
-                new_total = total - sims[d]["cost"] + res["cost"]
+                extra_days = 0 if sims[d]["stops"] else 1
+                extra_stay_food = (self.hospitality_cost(visiting_days + extra_days)
+                                   - self.hospitality_cost(visiting_days))
+                new_total = total - sims[d]["cost"] + res["cost"] + extra_stay_food
                 if new_total > self.budget + 1e-9:
                     reasons.add("budget")
                     over = new_total - self.budget
@@ -565,7 +570,7 @@ class Planner:
     def result(self):
         routes, sims = self.build()
         excluded, conflicts = self.explain_excluded(routes, sims)
-        by_day, legs, warnings = [], [], []
+        by_day, legs = [], []
         entry_total = fuel_total = 0.0
         all_verified = True
         for d in range(self.days):
@@ -600,35 +605,11 @@ class Planner:
             by_day.append({"day": d + 1, "stops": items,
                            "total_distance_km": round(sim["km"], 2),
                            "day_ends_at": fmt(sim["end_time"])})
-        food = _num(self.trip, "food_per_day", 0) * self.days
-        hotel = _num(self.trip, "hotel_per_night", 0) * max(self.days - 1, 0)
+        visiting_days = sum(bool(day["stops"]) for day in by_day)
+        food = self.food_per_day * visiting_days
+        hotel = self.hotel_per_night * max(visiting_days - 1, 0)
         total = entry_total + fuel_total + food + hotel
 
-        if not self.own:
-            warnings.append("Public-transport fares are not included: no verified fare data is loaded.")
-        if self.start_date is None:
-            warnings.append("No start_date given, so closed days were not checked.")
-        if self.source == "estimate":
-            warnings.append("Distances/times are straight-line estimates, not real road data.")
-        if getattr(self.travel_fn, "osrm_error", None):
-            warnings.append(f"OSRM road routing was unavailable ({self.travel_fn.osrm_error}); "
-                            "estimates were used instead.")
-        fallback_legs = getattr(getattr(self.travel_fn, "stats", None), "get", lambda *_: 0)("fallback_legs", 0)
-        if fallback_legs:
-            warnings.append(f"{fallback_legs} leg(s) had no OSRM data and used estimates.")
-        if self.time_factor != 1.0:
-            warnings.append(f"Travel times were multiplied by {self.time_factor} to allow for traffic.")
-        if self.select_all:
-            warnings.append("No places were selected, so every available place was considered.")
-        if self.skipped_records:
-            warnings.append(f"{self.skipped_records} place record(s) without a place_id were ignored.")
-        if self.fixed_cost > self.budget:
-            warnings.append(f"Food and accommodation alone ({round(self.fixed_cost)}) exceed the "
-                            f"budget ({round(self.budget)}); no places can be added.")
-        if conflicts:
-            warnings.append("Some compulsory places could not be scheduled. See 'conflicts'.")
-        warnings.append("Verify opening hours, fees and travel times before travelling; "
-                        "this plan is a heuristic, not a guaranteed optimum.")
         return {
             "success": True,
             "all_compulsory_scheduled": not conflicts,
@@ -650,7 +631,6 @@ class Planner:
             },
             "excluded_places": excluded,
             "conflicts": conflicts,
-            "warnings": warnings,
         }
 
 

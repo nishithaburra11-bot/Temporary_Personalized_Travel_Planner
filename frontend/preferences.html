@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <script src="planning-state.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ayan | Preferences</title>
@@ -305,6 +306,10 @@
             color: #9b7a55;
         }
 
+        .ticket .note {
+            color: #cdbb8a;
+        }
+
         .budget .note {
             margin-top: 10px;
             font-size: .92rem;
@@ -370,7 +375,7 @@
 
         .opt input:checked+.ob {
             border-color: var(--nav);
-            background: #820b31;
+            background: #0b8217ae;
             box-shadow: inset 0 0 0 1px var(--nav);
         }
 
@@ -853,13 +858,13 @@
             <div class="tw">
                 <div class="ticket">
                     <label class="lab" for="startLoc">Starting location</label>
-                    <input id="startLoc" list="locations" placeholder="Choose a stored place" style="width:100%;padding:12px;font:inherit;" required>
+                    <select id="startLoc" autocomplete="off" style="width:100%;padding:12px;font:inherit;"><option value="">Choose a place (optional — automatic)</option></select>
                     <label class="lab" for="endLoc">Ending location</label>
-                    <input id="endLoc" list="locations" placeholder="Same as starting location if blank" style="width:100%;padding:12px;font:inherit;">
-                    <datalist id="locations"></datalist>
+                    <select id="endLoc" autocomplete="off" style="width:100%;padding:12px;font:inherit;"><option value="">Choose a place (optional — automatic)</option></select>
+
                     <label class="lab" for="startDate">Travel start date (optional)</label>
                     <input id="startDate" type="date" style="padding:12px;font:inherit;">
-                    <p class="note">Choose a location from the curated dataset. Planning uses an 8-hour day starting at 09:00, for one traveler.</p>
+                    <p class="note">Choose stored locations or leave them blank for automatic itinerary endpoints. Planning uses an 8-hour day starting at 09:00, for one traveler.</p>
                 </div>
             </div>
 
@@ -879,7 +884,7 @@
                 <div class="ticket">
                     <fieldset>
                         <legend class="lab">Where would you like to stay?</legend>
-                        <div class="opts" id="hotelOpts"></div>
+                        <div class="opts" id="hotelOpts"></div><p class="note">Optional. Leave all unchecked for no stay, or click your selected stay again to clear it.</p>
                     </fieldset>
                 </div>
             </div>
@@ -944,7 +949,7 @@
         const PREFS_KEY = "ayan_preferences";     // localStorage: last chosen preferences
         const PLAN_KEY = "trip_result";       // sessionStorage: backend response for the next page
 
-        const MIN_DAYS = 1, MAX_DAYS = 30;
+        const MIN_DAYS = 0, MAX_DAYS = 30;
 
         const OPTIONS = {
             hotel: [
@@ -964,7 +969,7 @@
             ]
         };
 
-        const state = { days: 7, budget: 0, hotel: "comfort", food: "standard", pace: "balanced" };
+        const state = { days: 0, budget: 0, hotel: "none", food: "", pace: "" };
 
         const $ = id => document.getElementById(id);
         const budgetEl = $("budget");
@@ -975,7 +980,7 @@
             return div.innerHTML;
         }
         const inr = n => "₹" + Number(n).toLocaleString("en-IN");
-        const label = (group, v) => (OPTIONS[group].find(o => o.v === v) || {}).name || v;
+        const label = (group, v) => v === "none" ? "No stay" : (OPTIONS[group].find(o => o.v === v) || {}).name || v || "Not selected";
 
         // ---- storage helpers (never let storage errors break the page) ----
         function readPlaces() {
@@ -996,7 +1001,7 @@
                 if (Number.isInteger(saved.days)) state.days = Math.min(MAX_DAYS, Math.max(MIN_DAYS, saved.days));
                 if (Number.isFinite(saved.budget) && saved.budget > 0) state.budget = saved.budget;
                 for (const g of ["hotel", "food", "pace"]) {
-                    if (OPTIONS[g].some(o => o.v === saved[g])) state[g] = saved[g];
+                    if ((g === "hotel" && saved[g] === "none") || OPTIONS[g].some(o => o.v === saved[g])) state[g] = saved[g];
                 }
             } catch (e) { }
         }
@@ -1008,7 +1013,7 @@
         function buildOptions(group, containerId) {
             $(containerId).innerHTML = OPTIONS[group].map(o => `
                 <label class="opt">
-                    <input type="radio" name="${group}" value="${o.v}">
+                    <input type="${group === "hotel" ? "checkbox" : "radio"}" name="${group}" value="${o.v}">
                     <span class="ob">
                         <span class="ic" aria-hidden="true">${o.icon}</span>
                         <b>${o.name}</b>
@@ -1016,9 +1021,28 @@
                     </span>
                 </label>`).join("");
             $(containerId).addEventListener("change", e => {
-                if (e.target.name === group) { state[group] = e.target.value; update(); }
+                if (e.target.name === group) { state[group] = group === "hotel" && !e.target.checked ? "none" : e.target.value; update(); }
             });
         }
+
+        function saveLocations() {
+            const prefs = JSON.parse(localStorage.getItem("trip_preferences") || "{}");
+            prefs.start = $("startLoc").value;
+            prefs.end = $("endLoc").value;
+            localStorage.setItem("trip_preferences", JSON.stringify(prefs));
+            localStorage.removeItem("trip_result");
+        }
+        function refreshLocations() {
+            const places = Object.values(readPlaces());
+            for (const id of ["startLoc", "endLoc"]) {
+                const previous = $(id).value;
+                $(id).replaceChildren(new Option("Choose a place (optional — automatic)", ""));
+                places.forEach(place => $(id).append(new Option(place.place_name, place.place_name)));
+                $(id).value = places.some(place => place.place_name === previous) ? previous : "";
+            }
+        }
+        $("startLoc").addEventListener("change", saveLocations);
+        $("endLoc").addEventListener("change", saveLocations);
 
         // ---- render ----
         function update() {
@@ -1035,17 +1059,17 @@
             $("plane").style.transform = `translateX(-${p}%)`;
 
             // budget note
-            $("budgetNote").textContent = state.budget > 0
+            $("budgetNote").textContent = state.budget > 0 && state.days > 0
                 ? `That's about ${inr(Math.round(state.budget / state.days))} per day.`
                 : "Total for the whole trip.";
 
             // radios
             for (const g of ["hotel", "food", "pace"]) {
-                const r = document.querySelector(`input[name="${g}"][value="${state[g]}"]`);
-                if (r) r.checked = true;
+                document.querySelectorAll(`input[name="${g}"]`).forEach(r => r.checked = r.value === state[g]);
             }
 
             // places
+            refreshLocations();
             const places = Object.entries(readPlaces());
             $("picked").innerHTML = places.map(([key, p]) => `
                 <li>
@@ -1068,6 +1092,10 @@
             const hint = $("goHint");
             if (places.length === 0) {
                 go.disabled = true; hint.textContent = "Pick at least one place on the Places page first.";
+            } else if (state.days < 1) {
+                go.disabled = true; hint.textContent = "Choose at least one day to continue.";
+            } else if (!state.food || !state.pace) {
+                go.disabled = true; hint.textContent = "Choose your food budget and travel pace to continue.";
             } else if (!(state.budget > 0)) {
                 go.disabled = true; hint.textContent = "Enter your budget to continue.";
             } else {
@@ -1105,23 +1133,12 @@
             const err = $("err");
             err.hidden = true;
 
-            if (!Object.keys(readPlaces()).length || !(state.budget > 0)) return;
+            if (!Object.keys(readPlaces()).length || !(state.budget > 0) || state.days < 1 || !state.food || !state.pace) return;
             const start = $("startLoc").value.trim();
-            const end = $("endLoc").value.trim() || start;
-            if (!start) {
-                err.textContent = "Choose your starting location.";
-                err.hidden = false;
-                return;
-            }
-            const options = [...$("locations").options].map(o => o.value);
-            if (!options.includes(start) || !options.includes(end)) {
-                err.textContent = "Choose start and end locations from the stored suggestions.";
-                err.hidden = false;
-                return;
-            }
+            const end = $("endLoc").value.trim();
             const prefs = {
                 days: state.days, budget: state.budget,
-                stay_preference: {basic:"budget", comfort:"normal", luxury:"luxury"}[state.hotel],
+                stay_preference: {basic:"budget", comfort:"normal", luxury:"luxury"}[state.hotel] || "none",
                 food_budget: state.food, food_preference: "any",
                 travel_pace: {relaxed:"relaxed", balanced:"normal", packed:"fast"}[state.pace],
                 start, end, start_date: $("startDate").value || null,
@@ -1141,18 +1158,20 @@
             $("go").disabled = true;
             try {
                 const prefs = JSON.parse(localStorage.getItem("trip_preferences") || "{}");
-                $("startLoc").value = typeof prefs.start === "string" ? prefs.start : "";
-                $("endLoc").value = typeof prefs.end === "string" ? prefs.end : "";
+                $("startLoc").value = "";
+                $("endLoc").value = "";
                 $("startDate").value = prefs.start_date || "";
                 const res = await fetch(API + "/api/places");
                 const data = await res.json();
                 if (!res.ok || !Array.isArray(data.places)) throw new Error(data.error || "Unable to load places.");
                 const ids = new Set(JSON.parse(localStorage.getItem("selected_places") || "[]").map(Number));
                 writePlaces(Object.fromEntries(data.places.filter(p => ids.has(Number(p.place_id))).map(p => [p.place_id, p])));
-                data.places.filter(p => p.latitude != null && p.longitude != null).forEach(p => {
-                    $("locations").append(new Option(p.place_name, p.place_name));
-                });
                 update();
+                for (const [id, key] of [["startLoc", "start"], ["endLoc", "end"]]) {
+                    const value = prefs[key] || "";
+                    $(id).value = [...$(id).options].some(option => option.value === value) ? value : "";
+                }
+                saveLocations();
             } catch (error) {
                 $("err").textContent = error.message;
                 $("err").hidden = false;

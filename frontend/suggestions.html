@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <script src="planning-state.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ayan | Trip Suggestions & Resources</title>
@@ -150,6 +151,14 @@
         }
 
         .next-btn:hover { background: #7A3E00; }
+        details.card > summary { cursor: pointer; list-style: none; }
+        details.card > summary::-webkit-details-marker { display: none; }
+        details.card > summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+        .card-hint { display: block; margin-top: 10px; font-size: .8rem; color: var(--brown); }
+        .card-description { margin-top: 16px; }
+        .more-results { grid-column: 1 / -1; }
+        .more-results > summary { cursor: pointer; color: var(--brown); font: inherit; padding: 12px; }
+        .more-results .cards-grid { margin-top: 12px; }
     </style>
 </head>
 
@@ -213,48 +222,56 @@
         const hotelCard = (h, day = null) => {
             const link = hotelLink(h.official_booking_url);
             const label = day ? `Day ${day.day} · ${hotelLevel(h.category)}${day.optional_after_trip ? ' · Optional extra night' : ''}` : hotelLevel(h.category);
-            return `<div class="card">
-                <div>
+            return `<details class="card">
+                <summary>
                     <span class="card-tag">${escapeHotel(label)}</span>
-                    ${day && day.message ? `<p>${escapeHotel(day.message)}</p>` : ''}
                     <h3>${escapeHotel(h.hotel_name || h.name || 'Hotel')}</h3>
+                    <div class="card-footer">${h.price_per_night != null ? 'Est. ₹' + escapeHotel(h.price_per_night) + '/room/night' : 'Contact for rates'}</div>
+                    <span class="card-hint">Click for details</span>
+                </summary>
+                <div class="card-description">
                     <p>${escapeHotel(h.address || 'Address unavailable')}</p>
+                    ${h.description || h.facilities ? `<p>${escapeHotel(h.description || h.facilities)}</p>` : ''}
+                    ${day && day.message ? `<p>${escapeHotel(day.message)}</p>` : ''}
                     ${day && day.anchor_place_name ? `<p>Distance from ${escapeHotel(day.anchor_place_name)} · approx. ${escapeHotel(h.distance_to_stop_km)} km straight-line distance</p>` : ''}
-                </div>
-                <div class="card-footer">
-                    <span>${h.price_per_night != null ? 'Est. ₹' + escapeHotel(h.price_per_night) + '/room/night' : 'Contact for rates'}</span>
                     ${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer" class="action-link">Book &rarr;</a>` : ''}
                 </div>
-            </div>`;
+            </details>`;
         };
+        function firstThree(cards) {
+            return cards.slice(0, 3).join('') + (cards.length > 3
+                ? `<details class="more-results"><summary>More (${cards.length - 3})</summary><div class="cards-grid">${cards.slice(3).join('')}</div></details>` : '');
+        }
         if (Array.isArray(tripData.hotel_suggestions_by_day)) {
             const cards = tripData.hotel_suggestions_by_day.flatMap(day => day.hotels.length
                 ? day.hotels.map(h => hotelCard(h, day))
                 : [`<div class="empty-placeholder"><strong>Day ${escapeHotel(day.day)}</strong><p>${escapeHotel(day.message)}</p></div>`]);
-            if (cards.length) hotelsGrid.innerHTML = cards.join('');
+            if (cards.length) hotelsGrid.innerHTML = firstThree(cards);
         } else {
             const hotels = tripData.hotel_suggestions || [];
-            if (hotels.length) hotelsGrid.innerHTML = hotels.map(h => hotelCard(h)).join('');
+            if (hotels.length) hotelsGrid.innerHTML = firstThree(hotels.map(h => hotelCard(h)));
         }
 
         // 2. Food: retain the existing grid and card styles.
         const escapeFood = value => String(value ?? '').replace(/[&<>"']/g,
             char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
         const foodCard = (f, label, anchor, message = "", mode = "nearby") => `
-            <div class="card">
-                <div>
-                    <span class="card-tag">${escapeFood(label)}</span>
-                    ${message ? `<p>${escapeFood(message)}</p>` : ''}
+            <details class="card">
+                <summary>
+                    <span class="card-tag">${escapeFood(label)} · ${escapeFood(f.budget_tier || 'Tier unavailable')}</span>
                     <h3>${escapeFood(f.name || 'Eatery')}</h3>
-                    <p>${escapeFood(f.budget_tier || 'Tier unavailable')}</p>
+                    <div class="card-footer">${f.price_range_per_person != null ? 'Est. ₹' + escapeFood(f.price_range_per_person) + '/person' : 'Price unavailable'}</div>
+                    <span class="card-hint">Click for details</span>
+                </summary>
+                <div class="card-description">
                     <p>${escapeFood(f.address || 'Address unavailable')}</p>
+                    ${f.description || f.speciality_description || f.cuisine ? `<p>${escapeFood(f.description || f.speciality_description || f.cuisine)}</p>` : ''}
+                    ${f.dietary_options ? `<p>${escapeFood(f.dietary_options)}</p>` : ''}
+                    ${message ? `<p>${escapeFood(message)}</p>` : ''}
                     ${anchor ? `<p>${mode === "nearby" ? "Near" : "Distance from"} ${escapeFood(anchor)} · approx. ${escapeFood(f.distance_to_stop_km)} km straight-line distance</p>` : ''}
+                    <p>${escapeFood(f.opening_hours || 'Hours unavailable')}</p>
                 </div>
-                <div class="card-footer">
-                    <span>${f.price_range_per_person != null ? 'Est. ₹' + escapeFood(f.price_range_per_person) + '/person' : 'Price unavailable'}</span>
-                    <span>${escapeFood(f.opening_hours || 'Hours unavailable')}</span>
-                </div>
-            </div>`;
+            </details>`;
         if (Array.isArray(tripData.food_suggestions_by_day)) {
             const cards = tripData.food_suggestions_by_day.flatMap(day =>
                 day.meals.flatMap(meal => {
@@ -263,13 +280,13 @@
                         ? meal.restaurants.map(f => foodCard(f, label, meal.anchor_place_name, meal.message, meal.selection_mode))
                         : [`<div class="empty-placeholder"><strong>${escapeFood(label)}</strong><p>${escapeFood(meal.message)}</p></div>`];
                 }));
-            foodGrid.innerHTML = cards.length ? cards.join('')
+            foodGrid.innerHTML = cards.length ? firstThree(cards)
                 : '<div class="empty-placeholder">No scheduled stops for dining suggestions.</div>';
         } else {
             // Older locally saved trips remain readable until a new plan is generated.
             const foods = tripData.food_suggestions || [];
-            if (foods.length) foodGrid.innerHTML = foods.map(f =>
-                foodCard(f, f.budget_tier || 'Local Specialties', null)).join('');
+            if (foods.length) foodGrid.innerHTML = firstThree(foods.map(f =>
+                foodCard(f, f.budget_tier || 'Local Specialties', null)));
         }
 
         // 3. Resources

@@ -14,33 +14,23 @@ const destinations = {
  
 const select = document.getElementById("destSelect");
 const info = document.getElementById("destInfo");
- 
+const heading = document.getElementById("destName");
+
 select.addEventListener("change", () => {
-  const d = destinations[select.value];
- 
-  if (!d) {                      // "-- Select --" chosen
-    info.classList.add("hidden");
-    localStorage.removeItem("selectedDestination");
-    return;
+  const destination = destinations[select.value];
+  info.classList.toggle("hidden", !destination);
+  heading.textContent = destination ? destination.name : "Choose a destination";
+  try {
+    if (destination) localStorage.setItem("selectedDestination", select.value);
+    else localStorage.removeItem("selectedDestination");
+  } catch (error) {
+    // Selection remains usable when browser storage is disabled.
   }
- 
-  document.getElementById("destName").textContent = d.name;
- 
-  const img1 = document.getElementById("destImg");
-  img1.src = d.img;
-  img1.alt = d.name + " - view 1";
- 
-  const img2 = document.getElementById("destImg2");
-  img2.src = d.img2;
-  img2.alt = d.name + " - view 2";
- 
-  document.getElementById("destHistory").innerHTML = d.history
-    .map(p => `<p>${p}</p>`)
-    .join("");
- 
-  // Regions / Places / Plan pages ki ee value kavali
-  localStorage.setItem("selectedDestination", select.value);
- 
-  info.classList.remove("hidden");
+  if (!destination) return;
+  document.getElementById("destImg").src = destination.img;
+  document.getElementById("destImg2").src = destination.img2;
+  const cultureStart = destination.history[0].indexOf("Aptly called");
+  document.getElementById("cityText").textContent = destination.history[0].slice(0, cultureStart).trim();
+  document.getElementById("cultureText").textContent = destination.history[0].slice(cultureStart);
+  document.getElementById("artsText").textContent = destination.history[1];
 });
- 

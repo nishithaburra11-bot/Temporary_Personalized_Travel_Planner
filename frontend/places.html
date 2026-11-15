@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <script src="planning-state.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ayan | Choose Places</title>
@@ -60,7 +61,9 @@
             align-items: center;
         }
 
-        .filter-select {
+        .filter-bar { flex-wrap: wrap; }
+
+        .category-button {
             padding: 10px 14px;
             font: inherit;
             border-radius: 8px;
@@ -68,6 +71,10 @@
             background: var(--card);
             color: var(--ink);
         }
+
+        .category-button { cursor: pointer; }
+        .category-button[aria-pressed="true"] { background: var(--brown); color: var(--card); }
+        .category-button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 
         .places-grid {
             display: grid;
@@ -189,6 +196,13 @@
             border: 2px dashed var(--line);
             grid-column: 1 / -1;
         }
+        #photoViewer { margin: auto; width: 92vw; max-width: 1200px; max-height: 92vh; padding: 16px; border: 2px solid var(--gold); border-radius: 12px; background: var(--card); }
+        #photoViewer::backdrop { background: rgba(0,0,0,.75); }
+        .photo-controls { display: flex; gap: 12px; margin-bottom: 12px; }
+        .photo-controls button { padding: 8px 16px; font: inherit; cursor: pointer; }
+        #photoArea { overflow: auto; height: 70vh; }
+        #fullPhoto { display: block; max-width: none; margin: auto; }
+        .place-image img { cursor: zoom-in; }
     </style>
 </head>
 
@@ -209,10 +223,12 @@
             <div class="counter-badge" id="countBadge">Selected: 0 places</div>
         </div>
 
-        <div class="filter-bar">
-            <select id="categoryFilter" class="filter-select">
-                <option value="">All Categories</option>
-            </select>
+        <div id="categoryFilter" class="filter-bar" role="group" aria-label="Filter by category">
+            <button type="button" class="category-button" data-category="" aria-pressed="true">All Categories</button>
+            <button type="button" class="category-button" data-category="spiritual" aria-pressed="false">Spiritual</button>
+            <button type="button" class="category-button" data-category="historical" aria-pressed="false">Historical</button>
+            <button type="button" class="category-button" data-category="nature" aria-pressed="false">Nature</button>
+            <button type="button" class="category-button" data-category="cultural &amp; leisure" aria-pressed="false">Cultural &amp; Leisure</button>
         </div>
 
         <div id="placesGrid" class="places-grid">
@@ -225,6 +241,14 @@
         </div>
     </main>
 
+    <dialog id="photoViewer" aria-label="Full place photo">
+        <div class="photo-controls">
+            <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
+            <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
+            <button id="closePhoto" type="button">Close</button>
+        </div>
+        <div id="photoArea"><img id="fullPhoto" alt=""></div>
+    </dialog>
     <script>
         const API = "http://127.0.0.1:5000";
         let allPlaces = [];
@@ -249,6 +273,25 @@
         const nextBtn = document.getElementById("nextBtn");
         const categoryFilter = document.getElementById("categoryFilter");
 
+        const activeCategories = new Set();
+        categoryFilter.addEventListener("click", event => {
+            const button = event.target.closest("button[data-category]");
+            if (!button) return;
+            const category = button.dataset.category;
+            if (!category) {
+                activeCategories.clear();
+            } else if (activeCategories.has(category)) {
+                activeCategories.delete(category);
+            } else {
+                activeCategories.add(category);
+            }
+            categoryFilter.querySelectorAll("button").forEach(item => {
+                const key = item.dataset.category;
+                item.setAttribute("aria-pressed", String(key ? activeCategories.has(key) : activeCategories.size === 0));
+            });
+            renderPlaces();
+        });
+
         function updateUI() {
             badge.textContent = `Selected: ${selectedIds.size} places`;
             nextBtn.disabled = selectedIds.size === 0;
@@ -262,11 +305,27 @@
             } catch (e) {}
         }
 
-        function renderPlaces() {
-            const cat = categoryFilter.value;
+        const photoViewer = document.getElementById("photoViewer");
+        const fullPhoto = document.getElementById("fullPhoto");
+        const photoArea = document.getElementById("photoArea");
+        let photoWidth = 0;
+        function zoomPhoto(factor) {
+            photoWidth = Math.max(50, Math.min(fullPhoto.naturalWidth * 4, photoWidth * factor));
+            fullPhoto.style.width = photoWidth + "px";
+        }
+        document.getElementById("zoomIn").onclick = () => zoomPhoto(1.25);
+        document.getElementById("zoomOut").onclick = () => zoomPhoto(0.8);
+        document.getElementById("closePhoto").onclick = () => photoViewer.close();
+        fullPhoto.onload = () => {
+            photoWidth = Math.min(fullPhoto.naturalWidth, photoArea.clientWidth,
+                photoArea.clientHeight * fullPhoto.naturalWidth / fullPhoto.naturalHeight);
+            fullPhoto.style.width = photoWidth + "px";
+            photoArea.scrollTo(0, 0);
+        };
 
+        function renderPlaces() {
             const filtered = allPlaces.filter(p => {
-                if (cat && categoryKey(p.category) !== cat) return false;
+                if (activeCategories.size && !activeCategories.has(categoryKey(p.category))) return false;
                 return true;
             });
 
@@ -300,6 +359,22 @@
 
             grid.querySelectorAll(".place-image img").forEach(img => {
                 img.previousElementSibling.hidden = true;
+                img.tabIndex = 0;
+                img.setAttribute("role", "button");
+                img.setAttribute("aria-label", "Open full photo: " + img.alt);
+                function openPhoto(event) {
+                    event.stopPropagation();
+                    photoViewer.showModal();
+                    fullPhoto.alt = img.alt;
+                    fullPhoto.src = img.src;
+                }
+                img.addEventListener("click", openPhoto);
+                img.addEventListener("keydown", event => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openPhoto(event);
+                    }
+                });
                 img.addEventListener("error", () => {
                     img.previousElementSibling.hidden = false;
                     img.remove();
@@ -342,12 +417,6 @@
                 allPlaces = data.places;
                 const available = new Set(allPlaces.map(p => Number(p.place_id)));
                 selectedIds = new Set([...selectedIds].filter(id => available.has(id)));
-
-                // Categories for filter
-                const categories = new Map();
-                allPlaces.forEach(p => { if (p.category) categories.set(categoryKey(p.category), p.category); });
-                [...categories].sort().forEach(([key, label]) => categoryFilter.add(new Option(label, key)));
-                categoryFilter.addEventListener("change", renderPlaces);
 
                 renderPlaces();
                 updateUI();

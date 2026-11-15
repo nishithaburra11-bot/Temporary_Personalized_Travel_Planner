@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <script src="planning-state.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ayan | Generated Itinerary</title>
@@ -82,7 +83,7 @@
         }
 
         .day-block {
-            background: var(--card);
+            background: #f3e6cc;
             border: 1px solid var(--line);
             border-radius: 12px;
             padding: 24px;
@@ -110,38 +111,15 @@
             color: #7a6a4a;
         }
 
-        .timeline {
-            position: relative;
-            padding-left: 28px;
-        }
-
-        .timeline::before {
-            content: "";
-            position: absolute;
-            left: 8px;
-            top: 10px;
-            bottom: 10px;
-            width: 2px;
-            background: var(--gold);
-        }
-
-        .stop-item {
-            position: relative;
-            margin-bottom: 20px;
-        }
-
-        .stop-item::before {
-            content: "";
-            position: absolute;
-            left: -24px;
-            top: 6px;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #B45F06;
-            border: 2px solid #fff;
-        }
-
+        .day-route { display: flex; align-items: flex-start; overflow-x: auto; padding: 14px 2px 48px; }
+        .stop-item { position: relative; flex: 0 0 250px; padding: 22px 18px 18px; border: 1px solid var(--line); border-radius: 16px; background: #e9f1e3; }
+        .stop-item.lower { margin-top: 36px; }
+        .stop-number { position: absolute; top: -12px; left: 16px; border-radius: 50%; background: #B45F06; color: #fff; width: 26px; height: 26px; text-align: center; line-height: 26px; }
+        .route-link { flex: 0 0 88px; position: relative; margin-top: 55px; color: var(--brown); }
+        .route-link svg { display: block; width: 88px; height: 76px; overflow: visible; }
+        .route-link span { display: block; text-align: center; font-size: .8rem; color: #7a6a4a; }
+        .day-header { flex-wrap: wrap; gap: 12px; }
+        .stop-details { border-top: 1px dashed var(--line); padding-top: 10px; }
         .stop-time {
             font-size: 0.88rem;
             font-weight: bold;
@@ -265,9 +243,8 @@
 
             <!-- Stats -->
             <div class="summary-card" id="summaryCard"></div>
+            <div id="tripNotices" class="alert-box" hidden></div>
 
-            <!-- Warnings/Notes -->
-            <div id="warningsBox" class="alert-box" style="display: none;"></div>
 
             <!-- Daily Itinerary -->
             <div id="daysList"></div>
@@ -333,7 +310,7 @@
                 food_budget: prefs.food_budget || "standard",
                 stay_preference: prefs.stay_preference || "none",
                 start: prefs.start || "",
-                end: prefs.end || prefs.start || "",
+                end: prefs.end || "",
                 start_time: prefs.start_time || "09:00",
                 start_date: prefs.start_date || null,
                 selected_places: selectedIds,
@@ -366,7 +343,6 @@
 
         function renderResult(data) {
             const summary = document.getElementById("summaryCard");
-            const warningsBox = document.getElementById("warningsBox");
             const daysList = document.getElementById("daysList");
             const excludedBox = document.getElementById("excludedBox");
 
@@ -394,13 +370,27 @@
                 </div>
             `;
 
-            // 2. Warnings
-            if (data.warnings && data.warnings.length > 0) {
-                warningsBox.style.display = "block";
-                warningsBox.innerHTML = `<strong>⚠️ Trip Notices & Advisories:</strong><ul>` +
-                    data.warnings.map(w => `<li>${w}</li>`).join("") + `</ul>`;
-            } else {
-                warningsBox.style.display = "none";
+            const notices = document.getElementById("tripNotices");
+            const conflicts = data.conflicts || [];
+            notices.replaceChildren();
+            notices.hidden = conflicts.length === 0;
+            if (conflicts.length) {
+                const title = document.createElement("strong");
+                title.textContent = "Trip Notices & Advisories";
+                notices.append(title);
+                for (const conflict of conflicts) {
+                    const name = document.createElement("h4");
+                    name.textContent = conflict.place_name;
+                    const reasons = document.createElement("p");
+                    reasons.textContent = (conflict.reasons || []).join("; ");
+                    const tips = document.createElement("ul");
+                    for (const suggestion of conflict.suggestions || []) {
+                        const item = document.createElement("li");
+                        item.textContent = suggestion;
+                        tips.append(item);
+                    }
+                    notices.append(name, reasons, tips);
+                }
             }
 
             // 3. Days
@@ -411,12 +401,23 @@
                     const stops = d.stops || [];
                     const stopsHtml = stops.map((s, idx) => {
                         const travelMin = s.travel_duration_minutes || s.travel_minutes;
-                        const legHtml = (idx > 0 && travelMin) ?
-                            `<div class="travel-leg">🚗 Travel: ~${Math.round(travelMin)} mins</div>` : "";
+                        const legHtml = idx > 0 ? `<div class="route-link">
+                            <svg viewBox="0 0 88 76" aria-hidden="true"><path d="${idx % 2 ? 'M0 12 C30 12 58 48 88 48' : 'M0 48 C30 48 58 12 88 12'}" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/>
+                                <g transform="translate(27 17) rotate(${idx % 2 ? 15 : -15} 17 13)">
+                                    <path d="M3 12 L8 4 Q9 2 12 2 H22 Q25 2 27 5 L31 12 Z" fill="#d9822b" stroke="#6b3a06" stroke-width="1"/>
+                                    <path d="M10 5 H16 V11 H7 Z M19 5 H22 Q24 5 26 11 H19 Z" fill="#e9f1e3"/>
+                                    <rect x="0" y="11" width="35" height="12" rx="5" fill="#f2b544" stroke="#6b3a06" stroke-width="1"/>
+                                    <rect x="30" y="14" width="4" height="3" rx="1" fill="#fff8ec"/>
+                                    <circle cx="8" cy="23" r="5" fill="#6b3a06"/><circle cx="27" cy="23" r="5" fill="#6b3a06"/>
+                                    <circle cx="8" cy="23" r="2" fill="#f3e6cc"/><circle cx="27" cy="23" r="2" fill="#f3e6cc"/>
+                                </g>
+                            </svg>
+                            <span>${travelMin != null ? '~' + Math.round(travelMin) + ' min' : ''}</span></div>` : "";
                         const cost = s.estimated_cost !== undefined ? ` • 🏷 ₹${s.estimated_cost}` : "";
                         return `
                             ${legHtml}
-                            <div class="stop-item">
+                            <div class="stop-item ${idx % 2 ? 'lower' : ''}">
+                                <span class="stop-number">${idx + 1}</span>
                                 <div class="stop-time">${s.visit_start_time || s.arrival_time || s.arrive || ''} - ${s.departure_time || s.leave || ''}</div>
                                 <div class="stop-name">${s.place_name || s.name || 'Attraction'}</div>
                                 <div class="stop-details">
@@ -432,7 +433,7 @@
                                 <span class="day-title">Day ${d.day || d.day_number || 1} ${d.date ? '(' + d.date + ')' : ''}</span>
                                 <span class="day-meta">${stops.length} Stops • Daily Travel: ~${Math.round(d.total_distance_km || 0)} km</span>
                             </div>
-                            <div class="timeline">
+                            <div class="day-route" tabindex="0" aria-label="Places in visit order; scroll horizontally for more">
                                 ${stopsHtml || '<p>No stops scheduled for this day.</p>'}
                             </div>
                         </div>

@@ -10,3 +10,7 @@ SELECT DISTINCT category FROM places ;
 SHOW TABLES;
 
 SELECT * FROM food_places;
+SELECT * FROM trips;
+SELECT * FROM trip_places;
+SELECT * FROM travel_resources;
+SELECT * FROM itinerary_items;

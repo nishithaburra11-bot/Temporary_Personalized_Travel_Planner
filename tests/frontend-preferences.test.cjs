@@ -62,7 +62,7 @@ test('year rollover and leap day remain available without accepting invalid date
 
 test('plan separates three summary stats and maps the full budget including entry fees', () => {
     const html = fs.readFileSync(path.join(frontend, 'plan.html'), 'utf8');
-    const body = html.split('function renderResult(data) {')[1].split('const notices =')[0];
+    const body = html.split('function renderResult(data) {')[1].split('// 3. Days')[0];
     const elements = {};
     vm.runInNewContext(body, { data: { itinerary_by_day: [{ stops: [{}, {}] }], total_distance_km: 12, cost_breakdown: { fuel: { amount: 100 }, food: { amount: 200 }, accommodation: { amount: 300 }, entry_fees: { amount: 40 }, total: 640 } }, document: { getElementById: id => elements[id] ||= {} } });
     assert.equal((elements.summaryCard.innerHTML.match(/class="summary-stat"/g) || []).length, 3);

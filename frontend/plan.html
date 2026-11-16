@@ -255,7 +255,6 @@
             <!-- Stats -->
             <div class="summary-card" id="summaryCard"></div>
             <section class="summary-card spend-card" id="spendCard" aria-labelledby="spendTitle"></section>
-            <div id="tripNotices" class="alert-box" hidden></div>
 
 
             <!-- Daily Itinerary -->
@@ -388,29 +387,6 @@
                 ${costs.entry_fees?.amount ? `<p class="spend-note">Total also includes ${money(costs.entry_fees.amount)} in attraction entry fees.</p>` : ""}
             `;
 
-            const notices = document.getElementById("tripNotices");
-            const conflicts = data.conflicts || [];
-            notices.replaceChildren();
-            notices.hidden = conflicts.length === 0;
-            if (conflicts.length) {
-                const title = document.createElement("strong");
-                title.textContent = "Trip Notices & Advisories";
-                notices.append(title);
-                for (const conflict of conflicts) {
-                    const name = document.createElement("h4");
-                    name.textContent = conflict.place_name;
-                    const reasons = document.createElement("p");
-                    reasons.textContent = (conflict.reasons || []).join("; ");
-                    const tips = document.createElement("ul");
-                    for (const suggestion of conflict.suggestions || []) {
-                        const item = document.createElement("li");
-                        item.textContent = suggestion;
-                        tips.append(item);
-                    }
-                    notices.append(name, reasons, tips);
-                }
-            }
-
             // 3. Days
             if (!data.itinerary_by_day || data.itinerary_by_day.length === 0) {
                 daysList.innerHTML = `<div class="day-block">No stops could be scheduled within your given time/budget constraints.</div>`;
@@ -459,17 +435,51 @@
                 }).join("");
             }
 
-            // 4. Excluded
-            if (data.excluded_places && data.excluded_places.length > 0) {
-                excludedBox.style.display = "block";
-                excludedBox.innerHTML = `<h3>Unscheduled Places (${data.excluded_places.length})</h3>` +
-                    `<ul>` + data.excluded_places.map(ex => {
-                        const name = ex.place_name || ex.name || (`Place #${ex.place_id || ex.id}`);
-                        const reason = ex.reason || "Time / budget limit exceeded";
-                        return `<li><strong>${name}:</strong> ${reason}</li>`;
-                    }).join("") + `</ul>`;
-            } else {
-                excludedBox.style.display = "none";
+            // 4. Merge exclusion reasons and compulsory-place advisories once.
+            const unscheduled = new Map();
+            const compulsoryIds = new Set((data.compulsory_places || []).map(String));
+            for (const [places, isConflict] of [[data.excluded_places || [], false], [data.conflicts || [], true]]) {
+                for (const place of places) {
+                    const id = place.place_id ?? place.id;
+                    const name = place.place_name || place.name || `Place #${id}`;
+                    const key = id != null ? String(id) : name;
+                    const entry = unscheduled.get(key) || { name, compulsory: false, reasons: new Set(), suggestions: new Set() };
+                    entry.compulsory ||= isConflict || Boolean(place.compulsory) || compulsoryIds.has(String(id));
+                    for (const reason of [place.reason, ...(place.reasons || [])].filter(Boolean)) entry.reasons.add(reason);
+                    for (const suggestion of place.suggestions || []) entry.suggestions.add(suggestion);
+                    unscheduled.set(key, entry);
+                }
+            }
+            excludedBox.replaceChildren();
+            excludedBox.style.display = unscheduled.size ? "block" : "none";
+            if (unscheduled.size) {
+                const title = document.createElement("h3");
+                title.textContent = `Unscheduled Places (${unscheduled.size})`;
+                excludedBox.append(title);
+                for (const compulsory of [true, false]) {
+                    const places = [...unscheduled.values()].filter(place => place.compulsory === compulsory);
+                    if (!places.length) continue;
+                    const heading = document.createElement("h4");
+                    heading.textContent = compulsory ? "Compulsory places" : "Other places";
+                    const list = document.createElement("ul");
+                    for (const place of places) {
+                        const item = document.createElement("li");
+                        const name = document.createElement("strong");
+                        name.textContent = `${place.name}: `;
+                        item.append(name, [...place.reasons].join("; ") || "Time / budget limit exceeded");
+                        if (place.suggestions.size) {
+                            const tips = document.createElement("ul");
+                            for (const suggestion of place.suggestions) {
+                                const tip = document.createElement("li");
+                                tip.textContent = suggestion;
+                                tips.append(tip);
+                            }
+                            item.append(tips);
+                        }
+                        list.append(item);
+                    }
+                    excludedBox.append(heading, list);
+                }
             }
         }
 

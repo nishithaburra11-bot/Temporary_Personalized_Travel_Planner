@@ -383,7 +383,7 @@ def plan_trip(params):
 
     if auto_start or auto_end:
         # Try a nearest-neighbour route from each possible start. Prefer plans
-        # that include compulsory stops, then more visits, then less travel.
+        # that include compulsory stops, then more visits, then use more of the budget.
         starts = [endpoint(p) for p in located] if auto_start else [(s_lat, s_lon, s_label)]
         best = None
         for start in starts:
@@ -399,6 +399,7 @@ def plan_trip(params):
             stops = [stop for day in planned.get("itinerary_by_day", []) for stop in day.get("stops", [])]
             scheduled = {stop.get("place_id") for stop in stops}
             score = (len(scheduled.intersection(params["compulsory_ids"])), len(stops),
+                     planned["cost_breakdown"]["total"],
                      -planned.get("total_distance_km", 0))
             if best is None or score > best[0]:
                 best = (score, planned, start, end)

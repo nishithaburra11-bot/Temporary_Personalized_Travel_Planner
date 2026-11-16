@@ -2,6 +2,7 @@
 import math
 import re
 from datetime import date, datetime, timedelta
+from itertools import permutations
 
 DEFAULT_OSRM_URL = "https://router.project-osrm.org"
 USER_AGENT = "varanasi-trip-planner/2.0"
@@ -117,7 +118,7 @@ def _parse_closed(value):
 # --------------------------------------------------------------------------
 # Travel-time functions. A travel function takes two (lat, lon) tuples and
 # returns (distance_km, minutes), or None if no reliable route exists.
-# They carry a `.source` attribute ("estimate" / "osrm") used to identify the routing method.
+# They carry a `.source` attribute ("estimate" / "osrm") used for warnings.
 # --------------------------------------------------------------------------
 
 def make_estimate_fn(speed_kmph=25.0, detour=1.3):
@@ -224,6 +225,9 @@ def add_route_geometry(result, base_url=DEFAULT_OSRM_URL, timeout=15, fetch_fn=N
         except Exception as exc:
             day["route_geometry"] = [[la, lo] for la, lo in pts]
             day["route_geometry_status"] = "straight_line_fallback"
+            result["warnings"].append(
+                f"Day {day['day']}: road geometry unavailable ({type(exc).__name__}); "
+                "straight lines are shown instead of roads.")
     return result
 
 
@@ -235,7 +239,7 @@ class Planner:
     REASON_TEXT = {
         "pace": "daily stop limit for the selected travel pace reached",
         "closed": "closed on all the trip day(s)",
-        "hours": "cannot be reached within its opening hours alongside the other stops",
+        "hours": "Adding this stop would push a visit past closing time in the current itinerary.",
         "time": "insufficient remaining time in the available days",
         "budget": "budget constraint exceeded",
         "no_route": "no reliable route information available",
@@ -386,9 +390,10 @@ class Planner:
     def fuel(self, km):
         return km / self.mileage * self.fuel_price if self.own else 0.0
 
-    def hospitality_cost(self, visiting_days):
-        return (self.food_per_day * visiting_days
-                + self.hotel_per_night * max(visiting_days - 1, 0))
+    def trip_cost(self, sims):
+        days = sum(bool(sim["stops"]) for sim in sims)
+        return (sum(sim["cost"] for sim in sims) + self.food_per_day * days
+                + self.hotel_per_night * max(days - 1, 0))
 
     # ---------- constraint check: simulate one day ----------
     def sim_day(self, d, pids):
@@ -437,8 +442,6 @@ class Planner:
     def try_insert(self, pid, routes, sims):
         """Cheapest feasible (day, position) for pid. Returns (best, reasons, min_overshoot)."""
         p = self.places[pid]
-        visiting_days = sum(bool(s["stops"]) for s in sims)
-        total = sum(s["cost"] for s in sims) + self.hospitality_cost(visiting_days)
         best, reasons, min_over, closed_days = None, set(), None, 0
         for d in range(self.days):
             wd = self.weekday(d)
@@ -451,10 +454,7 @@ class Planner:
                 if res is None:
                     reasons.add(why)
                     continue
-                extra_days = 0 if sims[d]["stops"] else 1
-                extra_stay_food = (self.hospitality_cost(visiting_days + extra_days)
-                                   - self.hospitality_cost(visiting_days))
-                new_total = total - sims[d]["cost"] + res["cost"] + extra_stay_food
+                new_total = self.trip_cost(sims[:d] + [res] + sims[d + 1:])
                 if new_total > self.budget + 1e-9:
                     reasons.add("budget")
                     over = new_total - self.budget
@@ -497,7 +497,7 @@ class Planner:
         return best_route, best_sim
 
     # ---------- main ----------
-    def build(self):
+    def build_greedy(self):
         routes = [[] for _ in range(self.days)]
         sims = [self.sim_day(d, [])[0] for d in range(self.days)]
         comp_set = set(self.compulsory)
@@ -514,6 +514,128 @@ class Planner:
         for d in range(self.days):
             routes[d], sims[d] = self.two_opt(d, routes[d], sims[d])
         return routes, sims
+
+    def plan_score(self, routes, sims):
+        ids = {pid for route in routes for pid in route}
+        return (len(ids.intersection(self.compulsory)), len(ids),
+                round(self.trip_cost(sims), 2), -sum(sim["km"] for sim in sims))
+
+    def exact_search_fits(self):
+        size = len(self.places)
+        cap = min(size, self.trip.get("max_stops_per_day") or size)
+        counts = [1] + [0] * size
+        for _ in range(self.days):
+            counts = [sum(counts[n - k] * math.perm(size - n + k, k)
+                          for k in range(min(n, cap) + 1)) for n in range(size + 1)]
+            if sum(counts) > 25_000:
+                return False
+        return True
+
+    def build_exact(self):
+        cap = min(len(self.places), self.trip.get("max_stops_per_day") or len(self.places))
+        options = {}
+        best_routes, best_sims, best_rank = [], [], None
+
+        def visit(day, used, routes, sims):
+            nonlocal best_routes, best_sims, best_rank
+            if day == self.days:
+                rank = self.plan_score(routes, sims)
+                if best_rank is None or rank > best_rank:
+                    best_routes, best_sims, best_rank = routes, sims, rank
+                return
+            weekday = self.weekday(day)
+            if weekday not in options:
+                options[weekday] = []
+                for length in range(cap, -1, -1):
+                    for route in permutations(self.places, length):
+                        sim, _ = self.sim_day(day, route)
+                        if sim is not None:
+                            options[weekday].append((list(route), set(route), sim))
+            for route, ids, sim in options[weekday]:
+                next_sims = sims + [sim]
+                if used.isdisjoint(ids) and self.trip_cost(next_sims) <= self.budget + 1e-9:
+                    visit(day + 1, used | ids, routes + [route], next_sims)
+
+        visit(0, set(), [], [])
+        return best_routes, best_sims
+
+    def route_insertions(self, routes, sims, ids):
+        for pid in sorted(ids):
+            for day, route in enumerate(routes):
+                for index in range(len(route) + 1):
+                    updated = route[:index] + (pid,) + route[index:]
+                    sim, _ = self.sim_day(day, updated)
+                    if sim is None:
+                        continue
+                    next_sims = sims[:day] + [sim] + sims[day + 1:]
+                    if self.trip_cost(next_sims) <= self.budget + 1e-9:
+                        yield routes[:day] + (updated,) + routes[day + 1:], next_sims
+
+    def search_routes(self, best, empty, diversify):
+        frontier = [empty]
+        width = 48 if len(self.places) <= 8 else 6
+        while frontier:
+            candidates = {}
+            for routes, sims in frontier:
+                missing = self.places.keys() - {pid for route in routes for pid in route}
+                for updated, next_sims in self.route_insertions(routes, sims, missing):
+                    if updated in candidates:
+                        continue
+                    candidates[updated] = (self.plan_score(updated, next_sims), next_sims)
+            if not candidates:
+                break
+            ranked = sorted(candidates, key=lambda r: (
+                -candidates[r][0][0], candidates[r][0][2], -candidates[r][0][3], r))
+            winner = max(candidates, key=lambda r: candidates[r][0])
+            if candidates[winner][0] > self.plan_score(*best):
+                best = (winner, candidates[winner][1])
+            if diversify:
+                early = sorted(candidates, key=lambda r: (
+                    sum(sim["end_time"] - self.start_min for sim in candidates[r][1]), r))
+                ranked = list(dict.fromkeys(ranked[:width // 2] + early[:width // 2] + ranked))
+            frontier = [(r, candidates[r][1]) for r in ranked[:width]]
+        return best
+
+    def improve_routes(self, best):
+        for _ in range(2):
+            routes, sims = best
+            missing = self.places.keys() - {pid for route in routes for pid in route}
+            best_rank = self.plan_score(*best)
+            moves = []
+            for day, route in enumerate(routes):
+                for index, pid in enumerate(route):
+                    shortened = route[:index] + route[index + 1:]
+                    sim, _ = self.sim_day(day, shortened)
+                    if sim is None:
+                        continue
+                    base = routes[:day] + (shortened,) + routes[day + 1:]
+                    base_sims = sims[:day] + [sim] + sims[day + 1:]
+                    for candidate in self.route_insertions(base, base_sims, missing | {pid}):
+                        rank = self.plan_score(*candidate)
+                        if rank > best_rank:
+                            best, best_rank = candidate, rank
+                        if missing and any(pid in r for r in candidate[0]) and candidate[0] != routes:
+                            minutes = sum(s["end_time"] - self.start_min for s in candidate[1])
+                            moves.append((minutes, rank[2], candidate))
+            for _, _, (moved, moved_sims) in sorted(moves, key=lambda item: item[:2])[:6]:
+                for candidate in self.route_insertions(moved, moved_sims, missing):
+                    rank = self.plan_score(*candidate)
+                    if rank > best_rank:
+                        best, best_rank = candidate, rank
+            if best[0] == routes:
+                break
+        return best
+
+    def build(self):
+        if self.exact_search_fits():
+            return self.build_exact()
+        routes, sims = self.build_greedy()
+        best = (tuple(tuple(route) for route in routes), sims)
+        empty = (((),) * self.days, [self.sim_day(day, ())[0] for day in range(self.days)])
+        for diversify in (False, True):
+            best = self.search_routes(best, empty, diversify)
+        routes, sims = self.improve_routes(best)
+        return [list(route) for route in routes], sims
 
     # ---------- exclusion reasons & conflicts ----------
     def explain_excluded(self, routes, sims):
@@ -537,18 +659,16 @@ class Planner:
                 record(pid, f"Place {pid}", pid, msg, [msg],
                        ["Check the place id, or remove it from the compulsory places."])
 
-        order = ["closed", "no_route", "hours", "time", "budget", "pace"]
+        order = ("closed", "pace", "no_route", "hours", "time", "budget")
         for pid, p in self.places.items():
             if pid in scheduled:
                 continue
             _, reasons, over = self.try_insert(pid, routes, sims)
-            if not reasons:
-                reasons = {"time"}
-            text = "; ".join(self.REASON_TEXT[r] for r in order if r in reasons)
-            excluded.append({"place_id": p["id"], "place_name": p["name"], "reason": text,
+            reason = next((reason for reason in order if reason in reasons), "time")
+            excluded.append({"place_id": p["id"], "place_name": p["name"], "reason": self.REASON_TEXT[reason],
                              "compulsory": pid in comp})
             if pid in comp:
-                conflicts.append(self._suggest(p, reasons, over))
+                conflicts.append(self._suggest(p, {reason}, over))
         return excluded, conflicts
 
     def _suggest(self, p, reasons, over):
@@ -570,7 +690,7 @@ class Planner:
     def result(self):
         routes, sims = self.build()
         excluded, conflicts = self.explain_excluded(routes, sims)
-        by_day, legs = [], []
+        by_day, legs, warnings = [], [], []
         entry_total = fuel_total = 0.0
         all_verified = True
         for d in range(self.days):
@@ -610,6 +730,28 @@ class Planner:
         hotel = self.hotel_per_night * max(visiting_days - 1, 0)
         total = entry_total + fuel_total + food + hotel
 
+        if not self.own:
+            warnings.append("Public-transport fares are not included: no verified fare data is loaded.")
+        if self.start_date is None:
+            warnings.append("No start_date given, so closed days were not checked.")
+        if self.source == "estimate":
+            warnings.append("Distances/times are straight-line estimates, not real road data.")
+        if getattr(self.travel_fn, "osrm_error", None):
+            warnings.append(f"OSRM road routing was unavailable ({self.travel_fn.osrm_error}); "
+                            "estimates were used instead.")
+        fallback_legs = getattr(getattr(self.travel_fn, "stats", None), "get", lambda *_: 0)("fallback_legs", 0)
+        if fallback_legs:
+            warnings.append(f"{fallback_legs} leg(s) had no OSRM data and used estimates.")
+        if self.time_factor != 1.0:
+            warnings.append(f"Travel times were multiplied by {self.time_factor} to allow for traffic.")
+        if self.select_all:
+            warnings.append("No places were selected, so every available place was considered.")
+        if self.skipped_records:
+            warnings.append(f"{self.skipped_records} place record(s) without a place_id were ignored.")
+        if conflicts:
+            warnings.append("Some compulsory places could not be scheduled. See 'conflicts'.")
+        warnings.append("Verify opening hours, fees and travel times before travelling; "
+                        "this plan is a heuristic, not a guaranteed optimum.")
         return {
             "success": True,
             "all_compulsory_scheduled": not conflicts,
@@ -631,6 +773,7 @@ class Planner:
             },
             "excluded_places": excluded,
             "conflicts": conflicts,
+            "warnings": warnings,
         }
 
 

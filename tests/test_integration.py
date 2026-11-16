@@ -64,6 +64,39 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(len(result["itinerary_by_day"]), 30)
         self.assertFalse(result["all_compulsory_scheduled"])
 
+    def test_affordable_combinations_prioritize_stop_count_then_budget(self):
+        rows = [dict(place_id=i, latitude=25.3, longitude=83.0, entry_fee=fee)
+                for i, fee in enumerate((800, 350, 300, 300, 360), 1)]
+        trip = dict(days=1, hours_per_day=8, budget=1000, start_coords=[25.3, 83.0],
+                    selected_places=[1, 2, 3, 4, 5], max_stops_per_day=3)
+
+        result = backend.planner_module.generate_itinerary(trip, rows)
+        self.assertEqual({stop["place_id"] for stop in result["itinerary_by_day"][0]["stops"]}, {3, 4, 5})
+        self.assertEqual(result["cost_breakdown"]["total"], 960)
+
+        trip["compulsory_places"] = [1]
+        result = backend.planner_module.generate_itinerary(trip, rows)
+        self.assertTrue(result["all_compulsory_scheduled"])
+        self.assertEqual(result["cost_breakdown"]["total"], 800)
+
+    def test_short_visits_can_beat_cheaper_long_visits(self):
+        rows = [dict(place_id=i, latitude=25.3, longitude=83,
+                     entry_fee=1 if i <= 6 else 200,
+                     visit_duration_minutes=110 if i <= 6 else 25)
+                for i in range(1, 10)]
+        trip = dict(days=1, hours_per_day=2, budget=650, start_coords=[25.3, 83],
+                    max_stops_per_day=3)
+        planner = backend.planner_module
+        self.assertTrue(planner.Planner(trip, rows).exact_search_fits())
+
+        for run_exact in (True, False):
+            with self.subTest(run_exact=run_exact):
+                with patch.object(planner.Planner, "exact_search_fits", return_value=run_exact):
+                    result = planner.generate_itinerary(trip, rows)
+                stops = result["itinerary_by_day"][0]["stops"]
+                self.assertEqual({stop["place_id"] for stop in stops}, {7, 8, 9})
+                self.assertEqual(result["cost_breakdown"]["total"], 600)
+
     def test_nearest_suggestions(self):
         rows = [dict(name="far", latitude=26, longitude=83), dict(name="near", latitude=25.31, longitude=83), dict(name="unknown")]
         self.assertEqual(backend._near(rows, [(25.3, 83)])[0]["name"], "near")

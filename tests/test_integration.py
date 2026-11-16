@@ -97,6 +97,21 @@ class IntegrationTests(unittest.TestCase):
                 self.assertEqual({stop["place_id"] for stop in stops}, {7, 8, 9})
                 self.assertEqual(result["cost_breakdown"]["total"], 600)
 
+    def test_refinement_can_replace_a_long_stop_with_three_short_stops(self):
+        rows = [dict(place_id=i, latitude=25.3, longitude=83,
+                     visit_duration_minutes=110 if i == 1 else 25,
+                     entry_fee=1 if i == 1 else 200) for i in range(1, 5)]
+        trip = dict(days=1, hours_per_day=2, budget=650, start_coords=[25.3, 83],
+                    max_stops_per_day=3)
+        planner_module = backend.planner_module
+        planner = planner_module.Planner(trip, rows)
+        clock = iter(range(1000))
+        with patch.object(planner_module, "monotonic", side_effect=lambda: next(clock)):
+            routes, sims = planner.refine([["1"]], seconds=100)
+        self.assertEqual(set(routes[0]), {"2", "3", "4"})
+        self.assertEqual(planner.trip_cost(sims), 600)
+        self.assertEqual(planner.result()["optimization_status"], "optimal")
+
     def test_equivalent_schedules_use_the_earliest_day(self):
         places = [dict(place_id=i, latitude=25.3, longitude=83, entry_fee=0)
                   for i in range(1, 5)]

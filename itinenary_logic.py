@@ -3,6 +3,8 @@ import math
 import re
 from datetime import date, datetime, timedelta
 from itertools import permutations
+from random import Random
+from time import monotonic
 
 DEFAULT_OSRM_URL = "https://router.project-osrm.org"
 USER_AGENT = "varanasi-trip-planner/2.0"
@@ -639,6 +641,44 @@ class Planner:
         routes, sims = self.improve_routes(best)
         return [list(route) for route in routes], sims
 
+    def refine(self, initial_routes, seconds):
+        """Explore more combinations while retaining the best feasible itinerary."""
+        deadline = monotonic() + seconds
+        rng = Random(0)
+        best_routes = initial_routes
+        best_sims = [self.sim_day(day, route)[0] for day, route in enumerate(initial_routes)]
+        best_rank = self.plan_score(best_routes, best_sims)
+        compulsory = set(self.compulsory)
+        attempt = 0
+        while monotonic() < deadline:
+            scheduled = [pid for route in best_routes for pid in route]
+            # Alternate small changes with fresh starts so early choices can be undone.
+            remove_count = len(scheduled) if attempt % 4 == 0 else min(len(scheduled), 1 + attempt % 3)
+            removed = set(rng.sample(scheduled, remove_count))
+            routes = [[pid for pid in route if pid not in removed] for route in best_routes]
+            sims = [self.sim_day(day, route)[0] for day, route in enumerate(routes)]
+            if any(sim is None for sim in sims) or self.trip_cost(sims) > self.budget + 1e-9:
+                attempt += 1
+                continue
+            missing = sorted(self.places.keys() - {pid for route in routes for pid in route})
+            rng.shuffle(missing)
+            missing.sort(key=lambda pid: pid not in compulsory)
+            for pid in missing:
+                if monotonic() >= deadline:
+                    break
+                placement, _, _ = self.try_insert(pid, routes, sims)
+                if placement is not None:
+                    _, day, position, sim = placement
+                    routes[day].insert(position, pid)
+                    sims[day] = sim
+            rank = self.plan_score(routes, sims)
+            if rank > best_rank:
+                best_routes, best_sims, best_rank = routes, sims, rank
+            attempt += 1
+            if not missing:
+                break
+        return best_routes, best_sims
+
     # ---------- exclusion reasons & conflicts ----------
     def explain_excluded(self, routes, sims):
         scheduled = {p for r in routes for p in r}
@@ -689,8 +729,8 @@ class Planner:
                 "reasons": [self.REASON_TEXT[r] for r in sorted(reasons)], "suggestions": tips}
 
     # ---------- assemble JSON-friendly result ----------
-    def result(self):
-        routes, sims = self.build()
+    def result(self, solution=None):
+        routes, sims = self.build() if solution is None else solution
         excluded, conflicts = self.explain_excluded(routes, sims)
         by_day, legs = [], []
         entry_total = fuel_total = 0.0
@@ -754,6 +794,7 @@ class Planner:
             "excluded_places": excluded,
             "conflicts": conflicts,
             "warnings": [],
+            "optimization_status": "optimal" if self.exact_search_fits() else "best_found",
         }
 
 

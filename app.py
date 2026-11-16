@@ -413,6 +413,14 @@ def plan_trip(params):
         _, result, (s_lat, s_lon, s_label), (e_lat, e_lon, e_label) = best
     else:
         result = _call_planner(trip, clean)
+    if result["optimization_status"] == "best_found":
+        chosen_trip = dict(trip, start_coords=(s_lat, s_lon), end_coords=(e_lat, e_lon))
+        planner = planner_module.Planner(chosen_trip, clean)
+        routes = [[str(stop["place_id"]) for stop in day["stops"]]
+                  for day in result["itinerary_by_day"]]
+        result = planner.result(planner.refine(routes, seconds=0.4))
+    if auto_end and len(located) > 5:
+        result["optimization_status"] = "best_found"
     params["start_label"], params["end_label"] = s_label, e_label
     response = dict(result)                         # pass the planner's own keys through untouched
     response.setdefault("itinerary_by_day", [])

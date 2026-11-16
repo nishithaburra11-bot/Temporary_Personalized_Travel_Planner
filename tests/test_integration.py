@@ -21,6 +21,40 @@ if LIVE:
 class IntegrationTests(unittest.TestCase):
     def setUp(self):
         self.client = backend.app.test_client()
+        config = patch.dict(backend.app.config, {"OSRM_URL": ""})
+        config.start()
+        self.addCleanup(config.stop)
+
+    def test_osrm_matrix_is_shared_and_unavailable_service_falls_back(self):
+        places = [dict(place_id=i, place_name=f"Stop {i}", latitude=25.3,
+                       longitude=83 + i * .001, visit_duration_minutes=30)
+                  for i in (1, 2)]
+        payload = dict(days=1, hours_per_day=8, budget=500, selected_places=[1, 2],
+                       compulsory_places=[1, 2])
+        with patch.dict(backend.app.config, {"OSRM_URL": "http://osrm.test"}), \
+             patch.object(backend.db, "query", return_value=places), \
+             patch.object(backend.db, "safe_query", return_value=[]), \
+             patch.object(backend.planner_module.Planner, "exact_search_fits", return_value=False), \
+             patch("requests.get") as request:
+            request.return_value.json.return_value = {
+                "code": "Ok", "distances": [[0, 5000], [9000, 0]],
+                "durations": [[0, 600], [1200, 0]]
+            }
+            response = self.client.post("/api/trip", json=payload)
+            self.assertEqual(response.status_code, 200, response.get_json())
+            result = response.get_json()
+            request.assert_called_once()
+            self.assertIn("/table/v1/driving/", request.call_args.args[0])
+            self.assertEqual(result["travel_source"], "osrm")
+            self.assertTrue(result["all_compulsory_scheduled"])
+            self.assertTrue(any(leg["distance_km"] in (5, 9) for leg in result["travel_legs"]))
+
+            request.reset_mock()
+            request.side_effect = backend.requests.Timeout()
+            response = self.client.post("/api/trip", json=payload)
+            self.assertEqual(response.status_code, 200, response.get_json())
+            request.assert_called_once()
+            self.assertEqual(response.get_json()["travel_source"], "estimate")
 
     def test_syntax(self):
         for path in ROOT.glob("*.py"):

@@ -38,7 +38,8 @@ Preferences and results use browser storage, not database trip records. **Curren
 - The current preferences UI requests one traveler, an eight-hour day starting at 09:00, and own-vehicle transport.
 - Relaxed allows at most two stops/day; Balanced three; Packed has no count cap. Opening hours, visit/travel times and budget still limit stops.
 - Selected places may be excluded. Compulsory stops that cannot fit produce conflicts and suggestions; they are not guaranteed to fit.
-- Distances and travel times use an offline estimate (straight-line distance with a detour factor), not live traffic or verified road routing.
+- Own-vehicle plans use OSRM driving distances and durations when available. The backend requests one matrix per trip and reuses it across candidate routes. Unavailable road estimates fall back to the offline distance and time estimator. The response reports the travel source for the trip and each leg. These estimates do not include live traffic.
+- To use a different OSRM server, set `OSRM_URL` in `.env` and restart Flask. Leave the setting unset to use the public demo server for light testing, or set `OSRM_URL=` to run offline. For regular deployment, use a dedicated OSRM server.
 - Larger searches return a best-found result rather than a guaranteed optimum.
 - Blank endpoints are chosen automatically from selected places. A blank end does **not** necessarily mean returning to the start.
 - Split opening hours are reduced to the longest opening session. Without a start date, weekday closures cannot be checked.
@@ -106,6 +107,6 @@ On 2026-11-16, all 19 backend tests (including live checks) and four frontend te
 - Normalization issues and routing/optimization warnings are not consistently surfaced on the Plan page.
 - Refresh resets the planning flow; blocked or malformed browser storage is not handled consistently across every page.
 - Hardcoded localhost URLs need changing before hosting elsewhere.
-- Unused backend imports (`re`, `timedelta`, `requests`) and `_geocode_cache`, the unused `database.init_db()` setup helper, and legacy schema files are cleanup candidates. Optional OSRM helpers are unused by the current API but could support a future routing feature.
+- Unused backend imports (`re`, `timedelta`, `requests`) and `_geocode_cache`, the unused `database.init_db()` setup helper, and legacy schema files are cleanup candidates.
 
 See `REVIEW_NOTES.md` for the latest review findings. `INTEGRATION_REPORT.md` describes an earlier project state and should not be treated as the current feature specification.

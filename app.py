@@ -28,6 +28,7 @@ import database as db
 import itinenary_logic as planner_module        # Member 4's module (itenary_logic.py): ALL scheduling logic lives there
 
 app = Flask(__name__)
+app.config["OSRM_URL"] = os.getenv("OSRM_URL", planner_module.DEFAULT_OSRM_URL).strip().rstrip("/")
 if CORS:
     CORS(app)
 
@@ -223,10 +224,9 @@ def resolve_location(value):
 
 
 # ------------------------------------------------------------ planning
-def _call_planner(trip, places):
-    """Call generate_itinerary(trip, places, use_osrm, include_geometry) from itenary_logic.py."""
+def _call_planner(trip, places, travel_fn):
     try:
-        return planner_module.generate_itinerary(trip, places, use_osrm=False, include_geometry=False)
+        return planner_module.generate_itinerary(trip, places, travel_fn=travel_fn)
     except ValueError as exc:                      # planner's own validation messages -> HTTP 400
         raise ApiError(str(exc), 400)
 
@@ -379,6 +379,11 @@ def plan_trip(params):
     if params["start_date"]:
         trip["start_date"] = params["start_date"]      # (planner warns by itself if it is missing)
 
+    osrm_url = app.config["OSRM_URL"]
+    travel_fn = planner_module.build_travel_fn(
+        trip, clean, use_osrm=bool(osrm_url) and params["transport"] == "own_vehicle",
+        osrm_url=osrm_url, timeout=3)
+
     if auto_start or auto_end:
         # Keep the cross-region endpoint and also test nearby endpoints, so a
         # distant optional attraction doesn't force travel on an affordable day.
@@ -400,7 +405,7 @@ def plan_trip(params):
                 ends = list(dict.fromkeys([last, *nearby[:3]]))
             for end in ends:
                 candidate = dict(trip, start_coords=start[:2], end_coords=end[:2])
-                planned = _call_planner(candidate, clean)
+                planned = _call_planner(candidate, clean, travel_fn)
                 stops = [stop for day in planned.get("itinerary_by_day", []) for stop in day.get("stops", [])]
                 scheduled = {stop.get("place_id") for stop in stops}
                 score = (len(scheduled.intersection(params["compulsory_ids"])), len(stops),
@@ -410,10 +415,10 @@ def plan_trip(params):
                     best = (score, planned, start, end)
         _, result, (s_lat, s_lon, s_label), (e_lat, e_lon, e_label) = best
     else:
-        result = _call_planner(trip, clean)
+        result = _call_planner(trip, clean, travel_fn)
     if result["optimization_status"] == "best_found":
         chosen_trip = dict(trip, start_coords=(s_lat, s_lon), end_coords=(e_lat, e_lon))
-        planner = planner_module.Planner(chosen_trip, clean)
+        planner = planner_module.Planner(chosen_trip, clean, travel_fn)
         routes = [[str(stop["place_id"]) for stop in day["stops"]]
                   for day in result["itinerary_by_day"]]
         result = planner.result(planner.refine(routes, seconds=0.4))

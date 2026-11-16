@@ -165,19 +165,31 @@ def make_osrm_matrix_fn(points, base_url=DEFAULT_OSRM_URL, fallback=None,
     if data.get("code") != "Ok":
         raise RuntimeError(f"OSRM error: {data.get('code')} {data.get('message', '')}".strip())
     durations, distances = data["durations"], data["distances"]
+    if any(len(matrix) != len(points) or any(len(row) != len(points) for row in matrix)
+           for matrix in (durations, distances)):
+        raise ValueError("OSRM returned an incomplete distance or duration matrix")
     index = {p: i for i, p in enumerate(points)}
     stats = {"fallback_legs": 0}
 
-    def fn(a, b):
+    def road_leg(a, b):
         i, j = index.get(a), index.get(b)
-        d = t = None
-        if i is not None and j is not None:
-            d, t = distances[i][j], durations[i][j]
-        if d is None or t is None:
-            stats["fallback_legs"] += 1
-            return fallback(a, b) if fallback else None
-        return d / 1000.0, t / 60.0
+        if i is None or j is None:
+            return None
+        d, t = distances[i][j], durations[i][j]
+        if all(isinstance(value, (int, float)) and math.isfinite(value) and value >= 0
+               for value in (d, t)):
+            return d / 1000.0, t / 60.0
+        return None
+
+    def fn(a, b):
+        leg = road_leg(a, b)
+        if leg is not None:
+            return leg
+        stats["fallback_legs"] += 1
+        return fallback(a, b) if fallback else None
+
     fn.source = "osrm"
+    fn.source_for_leg = lambda a, b: "osrm" if a == b or road_leg(a, b) is not None else "estimate"
     fn.stats = stats
     return fn
 
@@ -733,18 +745,20 @@ class Planner:
         routes, sims = self.build() if solution is None else solution
         excluded, conflicts = self.explain_excluded(routes, sims)
         by_day, legs = [], []
+        source_for_leg = getattr(self.travel_fn, "source_for_leg", lambda a, b: self.source)
         entry_total = fuel_total = 0.0
         all_verified = True
         for d in range(self.days):
             sim, items = sims[d], []
             pos_name = "Start"
+            previous = self.start
             for st in sim["stops"]:
                 p = self.places[st["pid"]]
                 leg_cost = self.fuel(st["km"])
                 legs.append({"day": d + 1, "from": pos_name, "to": p["name"],
                              "distance_km": round(st["km"], 2),
                              "duration_min": round(st["travel_min"]),
-                             "distance_source": self.source, "cost_status": "estimated"})
+                             "distance_source": source_for_leg(previous, p["xy"]), "cost_status": "estimated"})
                 items.append({"place_id": p["id"], "place_name": p["name"],
                               "visit_duration_minutes": p["dur"],
                               "latitude": p["xy"][0], "longitude": p["xy"][1],
@@ -757,11 +771,12 @@ class Planner:
                               "estimated_cost": round(p["fee"] + leg_cost, 2)})
                 all_verified = all_verified and p["fee_verified"]
                 pos_name = p["name"]
+                previous = p["xy"]
             if sim["stops"]:
                 legs.append({"day": d + 1, "from": pos_name, "to": "End",
                              "distance_km": round(sim["back_km"], 2),
                              "duration_min": round(sim["back_min"]),
-                             "distance_source": self.source, "cost_status": "estimated"})
+                             "distance_source": source_for_leg(previous, self.end), "cost_status": "estimated"})
             entry_total += sim["fees"]
             fuel_total += self.fuel(sim["km"])
             by_day.append({"day": d + 1, "stops": items,
@@ -771,6 +786,7 @@ class Planner:
         food = self.food_per_day * visiting_days
         hotel = self.hotel_per_night * max(visiting_days - 1, 0)
         total = entry_total + fuel_total + food + hotel
+        sources = {leg["distance_source"] for leg in legs}
 
         return {
             "success": True,
@@ -778,7 +794,7 @@ class Planner:
             "compulsory_places": [self._orig(k) for k in self.compulsory],
             "start_coords": list(self.start),
             "end_coords": list(self.end),
-            "travel_source": self.source,
+            "travel_source": "mixed" if len(sources) > 1 else next(iter(sources), self.source),
             "itinerary_by_day": by_day,
             "travel_legs": legs,
             "total_distance_km": round(sum(s["km"] for s in sims), 2),

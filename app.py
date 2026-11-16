@@ -382,27 +382,34 @@ def plan_trip(params):
         trip["start_date"] = params["start_date"]      # (planner warns by itself if it is missing)
 
     if auto_start or auto_end:
-        # Try a nearest-neighbour route from each possible start. Prefer plans
-        # that include compulsory stops, then more visits, then use more of the budget.
-        starts = [endpoint(p) for p in located] if auto_start else [(s_lat, s_lon, s_label)]
+        # Keep the cross-region endpoint and also test nearby endpoints, so a
+        # distant optional attraction doesn't force travel on an affordable day.
+        endpoints = [endpoint(p) for p in located]
+        starts = endpoints if auto_start else [(s_lat, s_lon, s_label)]
         best = None
         for start in starts:
-            remaining = list(located)
-            point = start[:2]
-            while remaining:
-                last = min(remaining, key=lambda p: planner_module.haversine_km(point, endpoint(p)[:2]))
-                remaining.remove(last)
-                point = endpoint(last)[:2]
-            end = endpoint(last) if auto_end else (e_lat, e_lon, e_label)
-            candidate = dict(trip, start_coords=start[:2], end_coords=end[:2])
-            planned = _call_planner(candidate, clean)
-            stops = [stop for day in planned.get("itinerary_by_day", []) for stop in day.get("stops", [])]
-            scheduled = {stop.get("place_id") for stop in stops}
-            score = (len(scheduled.intersection(params["compulsory_ids"])), len(stops),
-                     planned["cost_breakdown"]["total"],
-                     -planned.get("total_distance_km", 0))
-            if best is None or score > best[0]:
-                best = (score, planned, start, end)
+            ends = [(e_lat, e_lon, e_label)]
+            if auto_end and len(endpoints) <= 5:
+                ends = endpoints
+            elif auto_end:
+                nearby = sorted(endpoints, key=lambda p: planner_module.haversine_km(start[:2], p[:2]))
+                remaining = nearby.copy()
+                point = start[:2]
+                while remaining:
+                    last = min(remaining, key=lambda p: planner_module.haversine_km(point, p[:2]))
+                    remaining.remove(last)
+                    point = last[:2]
+                ends = list(dict.fromkeys([last, *nearby[:3]]))
+            for end in ends:
+                candidate = dict(trip, start_coords=start[:2], end_coords=end[:2])
+                planned = _call_planner(candidate, clean)
+                stops = [stop for day in planned.get("itinerary_by_day", []) for stop in day.get("stops", [])]
+                scheduled = {stop.get("place_id") for stop in stops}
+                score = (len(scheduled.intersection(params["compulsory_ids"])), len(stops),
+                         planned["cost_breakdown"]["total"],
+                         -planned.get("total_distance_km", 0))
+                if best is None or score > best[0]:
+                    best = (score, planned, start, end)
         _, result, (s_lat, s_lon, s_label), (e_lat, e_lon, e_label) = best
     else:
         result = _call_planner(trip, clean)

@@ -247,6 +247,22 @@ class IntegrationTests(unittest.TestCase):
         result = backend.planner_module.generate_itinerary(trip, places)
         self.assertEqual(result["cost_breakdown"]["total"], 0)
 
+    def test_automatic_endpoints_keep_an_affordable_local_route(self):
+        places = [dict(place_id=i, place_name=f"Stop {i}", latitude=25.3,
+                       longitude=longitude, visit_duration_minutes=30, entry_fee=0)
+                  for i, longitude in enumerate((83, 83.001, 83.4, 83.401, 83.8, 83.801), 1)]
+        payload = dict(days=1, hours_per_day=8, budget=500, food_budget="budget",
+                       selected_places=[p["place_id"] for p in places], compulsory_places=[2])
+        foods = [dict(budget_tier="budget", price_range_per_person=215)]
+        with patch.object(backend.db, "query", return_value=places), \
+             patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: foods if "food_places" in sql else []), \
+             patch.object(backend.db, "save_trip", return_value=None):
+            response = self.client.post("/api/trip", json=payload)
+        self.assertEqual(response.status_code, 200, response.get_json())
+        result = response.get_json()
+        self.assertEqual({s["place_id"] for s in result["itinerary_by_day"][0]["stops"]}, {1, 2})
+        self.assertLessEqual(result["cost_breakdown"]["total"], 500)
+
     def test_optional_endpoints_and_no_stay(self):
         places = [dict(place_id=i, place_name=f"Stop {i}", latitude=25.3 + i * .001,
                        longitude=83, opening_time="00:00", closing_time="23:59",

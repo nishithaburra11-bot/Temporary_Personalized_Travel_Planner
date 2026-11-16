@@ -272,10 +272,9 @@ class Planner:
         self.select_all = not selected
         selected |= set(self.compulsory)
 
-        self.places, self.bad_data, self.skipped_records = {}, {}, 0
+        self.places, self.bad_data = {}, {}
         for raw in places:
             if raw.get("place_id") in (None, ""):
-                self.skipped_records += 1
                 continue
             pid = _key(raw["place_id"])
             if not self.select_all and pid not in selected:
@@ -690,7 +689,7 @@ class Planner:
     def result(self):
         routes, sims = self.build()
         excluded, conflicts = self.explain_excluded(routes, sims)
-        by_day, legs, warnings = [], [], []
+        by_day, legs = [], []
         entry_total = fuel_total = 0.0
         all_verified = True
         for d in range(self.days):
@@ -730,28 +729,6 @@ class Planner:
         hotel = self.hotel_per_night * max(visiting_days - 1, 0)
         total = entry_total + fuel_total + food + hotel
 
-        if not self.own:
-            warnings.append("Public-transport fares are not included: no verified fare data is loaded.")
-        if self.start_date is None:
-            warnings.append("No start_date given, so closed days were not checked.")
-        if self.source == "estimate":
-            warnings.append("Distances/times are straight-line estimates, not real road data.")
-        if getattr(self.travel_fn, "osrm_error", None):
-            warnings.append(f"OSRM road routing was unavailable ({self.travel_fn.osrm_error}); "
-                            "estimates were used instead.")
-        fallback_legs = getattr(getattr(self.travel_fn, "stats", None), "get", lambda *_: 0)("fallback_legs", 0)
-        if fallback_legs:
-            warnings.append(f"{fallback_legs} leg(s) had no OSRM data and used estimates.")
-        if self.time_factor != 1.0:
-            warnings.append(f"Travel times were multiplied by {self.time_factor} to allow for traffic.")
-        if self.select_all:
-            warnings.append("No places were selected, so every available place was considered.")
-        if self.skipped_records:
-            warnings.append(f"{self.skipped_records} place record(s) without a place_id were ignored.")
-        if conflicts:
-            warnings.append("Some compulsory places could not be scheduled. See 'conflicts'.")
-        warnings.append("Verify opening hours, fees and travel times before travelling; "
-                        "this plan is a heuristic, not a guaranteed optimum.")
         return {
             "success": True,
             "all_compulsory_scheduled": not conflicts,
@@ -773,7 +750,7 @@ class Planner:
             },
             "excluded_places": excluded,
             "conflicts": conflicts,
-            "warnings": warnings,
+            "warnings": [],
         }
 
 

@@ -40,39 +40,3 @@ CREATE TABLE IF NOT EXISTS travel_resources (
     fee DECIMAL(10,2),
     source_checked_date DATE
 ) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS trips (
-    trip_id INT AUTO_INCREMENT PRIMARY KEY,
-    start_location VARCHAR(255),
-    end_location VARCHAR(255),
-    number_of_days INT,
-    hours_per_day DECIMAL(5,2),
-    budget DECIMAL(12,2),
-    transport_mode VARCHAR(30),
-    food_preference VARCHAR(30),
-    stay_preference VARCHAR(30),
-    travel_pace VARCHAR(30),
-    params_json LONGTEXT,                    -- full validated request, used for recalculation
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS trip_places (
-    trip_id INT NOT NULL,
-    place_id INT NOT NULL,
-    is_selected TINYINT(1) DEFAULT 1,
-    is_compulsory TINYINT(1) DEFAULT 0,
-    PRIMARY KEY (trip_id, place_id),
-    FOREIGN KEY (trip_id) REFERENCES trips(trip_id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS itinerary_items (
-    item_id INT AUTO_INCREMENT PRIMARY KEY,
-    trip_id INT NOT NULL,
-    day_number INT,
-    place_id INT,
-    arrival_time VARCHAR(20),
-    departure_time VARCHAR(20),
-    travel_duration_minutes DECIMAL(8,1),
-    estimated_cost DECIMAL(10,2),
-    FOREIGN KEY (trip_id) REFERENCES trips(trip_id) ON DELETE CASCADE
-) ENGINE=InnoDB;

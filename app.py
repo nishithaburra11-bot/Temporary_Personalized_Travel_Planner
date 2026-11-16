@@ -11,9 +11,7 @@ Endpoints
   GET  /api/places?region=A&region=B      (region filter optional; use region NAMES)
   GET  /api/data-quality                  problems found in the places data
   POST /api/trip                          generate a trip
-  POST /api/trip/recalculate              FULL regeneration ({trip_id, add_compulsory|compulsory_places} or a full payload)
 """
-import json
 import math
 import os
 import re
@@ -443,11 +441,6 @@ def plan_trip(params):
     response["hotel_suggestions"] = _near(hotels, sched_pts)
     response["hotel_suggestions_by_day"] = hotel_suggestions_by_day(
         response["itinerary_by_day"], hotels_every_tier, params["stay_preference"])
-    try:
-        response["trip_id"] = db.save_trip(params, response["itinerary_by_day"], set(params["compulsory_ids"]), ids)
-    except Exception:
-        app.logger.exception("Could not save trip")
-        response["trip_id"] = None
     return response
 
 
@@ -524,30 +517,6 @@ def create_trip():
     data = request.get_json(silent=True)
     if data is None:
         raise ApiError("Body must be valid JSON.")
-    return jsonify(plan_trip(validate_trip(data)))
-
-
-@app.post("/api/trip/recalculate")
-def recalculate():
-    """Rebuild the WHOLE itinerary from scratch with the new compulsory set (never patch the old one)."""
-    data = request.get_json(silent=True)
-    if not isinstance(data, dict):
-        raise ApiError("Body must be a JSON object.")
-    if "trip_id" in data:
-        row = db.query_one("SELECT params_json FROM trips WHERE trip_id = %s", (data["trip_id"],))
-        if not row:
-            raise ApiError("Unknown trip_id.", 404)
-        base = json.loads(row["params_json"])
-        prev = [r["place_id"] for r in db.query(
-            "SELECT place_id FROM trip_places WHERE trip_id = %s AND is_compulsory = 1", (data["trip_id"],))]
-        base["compulsory_places"] = data["compulsory_places"] if "compulsory_places" in data else \
-            list(dict.fromkeys(prev + list(data.get("add_compulsory", []))))
-        for k, v in data.items():
-            if k not in ("trip_id", "compulsory_places", "add_compulsory"):
-                base[k] = v
-        data = base
-    elif "add_compulsory" in data:
-        raise ApiError("'add_compulsory' needs a 'trip_id'.")
     return jsonify(plan_trip(validate_trip(data)))
 
 

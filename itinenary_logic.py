@@ -818,15 +818,3 @@ def generate_itinerary(trip, places, travel_fn=None, use_osrm=False,
     if include_geometry:
         add_route_geometry(result, base_url=osrm_url)
     return result
-
-
-def recalculate(trip, places, new_compulsory_ids, travel_fn=None, use_osrm=False,
-                include_geometry=False, osrm_url=DEFAULT_OSRM_URL):
-    """Make places compulsory and rebuild the WHOLE itinerary from scratch.
-    Previously compulsory places stay compulsory (union of old + new)."""
-    merged = list(dict.fromkeys(_key(x) for x in
-                                list(trip.get("compulsory_places") or []) + list(new_compulsory_ids or [])))
-    return generate_itinerary({**trip, "compulsory_places": merged}, places, travel_fn,
-                              use_osrm, include_geometry, osrm_url)
-
-

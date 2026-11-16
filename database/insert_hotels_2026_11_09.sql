@@ -376,3 +376,49 @@ VALUES
     7000,
     'https://www.rivatas.com/'
 );
+
+
+USE personalized_travel_planner;
+
+START TRANSACTION;
+
+-- Sample food prices per person, per meal:
+-- budget: ₹100–200
+-- standard: ₹250–450
+-- premium: ₹500–900
+-- unknown tier: ₹200–400
+UPDATE food_places
+SET price_range_per_person =
+    CASE LOWER(TRIM(COALESCE(budget_tier, '')))
+        WHEN 'budget'   THEN 100 + FLOOR(RAND() * 101)
+        WHEN 'standard' THEN 250 + FLOOR(RAND() * 201)
+        WHEN 'premium'  THEN 500 + FLOOR(RAND() * 401)
+        ELSE 200 + FLOOR(RAND() * 201)
+    END
+WHERE price_range_per_person IS NULL;
+
+-- Sample hotel prices per room, per night:
+-- budget: ₹800–1,800
+-- normal: ₹2,500–4,500
+-- luxury: ₹6,000–10,000
+-- unknown category: ₹1,500–2,500
+UPDATE hotels
+SET price_per_night =
+    CASE LOWER(TRIM(COALESCE(category, '')))
+        WHEN 'budget' THEN 800  + FLOOR(RAND() * 1001)
+        WHEN 'normal' THEN 2500 + FLOOR(RAND() * 2001)
+        WHEN 'luxury' THEN 6000 + FLOOR(RAND() * 4001)
+        ELSE 1500 + FLOOR(RAND() * 1001)
+    END
+WHERE price_per_night IS NULL;
+
+COMMIT;
+
+-- Check the resulting prices.
+SELECT food_place_id, name, budget_tier, price_range_per_person
+FROM food_places
+ORDER BY food_place_id;
+
+SELECT hotel_id, hotel_name, category, price_per_night
+FROM hotels
+ORDER BY hotel_id;

@@ -1,7 +1,6 @@
 """MySQL access layer (PyMySQL). Connection details come from environment variables / a .env file."""
 import datetime
 import decimal
-import json
 import os
 
 import pymysql
@@ -89,39 +88,3 @@ def init_db():
         except Exception as exc:
             problems.append(f"{type(exc).__name__}: {exc}")
     return problems
-
-
-def save_trip(params, days, compulsory_ids, selected_ids):
-    """Persist a trip + its itinerary. `days` = itinerary_by_day from the planner. Returns trip_id."""
-    conn = get_conn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """INSERT INTO trips (start_location, end_location, number_of_days, hours_per_day, budget,
-                   transport_mode, food_preference, stay_preference, travel_pace, params_json)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (params["start_label"], params["end_label"], params["days"], params["hours_per_day"],
-                 params["budget"], params["transport"], params["food_preference"],
-                 params["stay_preference"], params["travel_pace"], json.dumps(params["raw"])))
-            trip_id = cur.lastrowid
-            for pid in selected_ids:
-                cur.execute("INSERT INTO trip_places (trip_id, place_id, is_selected, is_compulsory) "
-                            "VALUES (%s,%s,1,%s)", (trip_id, pid, 1 if pid in compulsory_ids else 0))
-            for day in days:
-                for s in day.get("stops", []):
-                    pid = s.get("place_id", s.get("id"))
-                    if pid is None:
-                        continue
-                    cur.execute(
-                        """INSERT INTO itinerary_items (trip_id, day_number, place_id, arrival_time,
-                           departure_time, travel_duration_minutes, estimated_cost)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s)""",
-                        (trip_id, day.get("day"), pid,
-                         str(s.get("arrival_time", s.get("arrive", ""))),
-                         str(s.get("departure_time", s.get("leave", ""))),
-                         s.get("travel_duration_minutes", s.get("travel_min", s.get("travel_minutes"))),
-                         s.get("estimated_cost", s.get("cost"))))
-        conn.commit()
-        return trip_id
-    finally:
-        conn.close()

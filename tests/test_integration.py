@@ -48,6 +48,26 @@ class IntegrationTests(unittest.TestCase):
         for value in [None, [], {}, {"days": float("inf")}, {"days": 1.5}, {"food_preference": []}, {"food_budget": []}]:
             self.assertEqual(self.client.post("/api/trip", json=value).status_code, 400)
 
+    def test_generate_again_without_trip_storage(self):
+        places = [dict(place_id=1, place_name="Demo", latitude=25.3, longitude=83,
+                       opening_time="00:00", closing_time="23:59",
+                       visit_duration_minutes=30, entry_fee=100)]
+        payload = dict(days=1, hours_per_day=8, budget=500, selected_places=[1],
+                       start={"lat": 25.3, "lng": 83}, end={"lat": 25.3, "lng": 83})
+        with patch.object(backend.db, "query", return_value=places), \
+             patch.object(backend.db, "safe_query", return_value=[]), \
+             patch.object(backend.db, "get_conn", side_effect=AssertionError("Unexpected database connection")), \
+             patch.object(backend.db, "execute", side_effect=AssertionError("Unexpected database write")):
+            first = self.client.post("/api/trip", json=payload)
+            self.assertEqual(first.status_code, 200)
+            self.assertNotIn("trip_id", first.get_json())
+            self.assertEqual(first.get_json()["cost_breakdown"]["total"], 100)
+            updated = self.client.post("/api/trip", json=dict(payload, budget=0))
+            self.assertEqual(updated.status_code, 200)
+            self.assertEqual(updated.get_json()["cost_breakdown"]["total"], 0)
+            self.assertEqual(updated.get_json()["itinerary_by_day"][0]["stops"], [])
+        self.assertNotIn("/api/trip/recalculate", {rule.rule for rule in backend.app.url_map.iter_rules()})
+
     def test_pace_budget_and_duration(self):
         rows = [dict(place_id=i, place_name=f"Test {i}", latitude=25.3, longitude=83.0,
                      opening_time="00:00", closing_time="23:59", visit_duration_minutes=60, entry_fee=100) for i in range(1, 5)]
@@ -232,8 +252,7 @@ class IntegrationTests(unittest.TestCase):
                        start={"lat":25.3,"lng":83}, end={"lat":25.3,"lng":83},
                        selected_places=[1], compulsory_places=[1], stay_preference="normal")
         with patch.object(backend.db, "query", return_value=[place]), \
-             patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: hotels if sql == "SELECT * FROM hotels" else []), \
-             patch.object(backend.db, "save_trip", return_value=None):
+             patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: hotels if sql == "SELECT * FROM hotels" else []):
             response = self.client.post("/api/trip", json=payload)
         self.assertEqual(response.status_code, 200, response.get_json())
         result = response.get_json()
@@ -281,8 +300,7 @@ class IntegrationTests(unittest.TestCase):
                        selected_places=[p["place_id"] for p in places], compulsory_places=[2])
         foods = [dict(budget_tier="budget", price_range_per_person=215)]
         with patch.object(backend.db, "query", return_value=places), \
-             patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: foods if "food_places" in sql else []), \
-             patch.object(backend.db, "save_trip", return_value=None):
+             patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: foods if "food_places" in sql else []):
             response = self.client.post("/api/trip", json=payload)
         self.assertEqual(response.status_code, 200, response.get_json())
         result = response.get_json()
@@ -301,8 +319,7 @@ class IntegrationTests(unittest.TestCase):
                            ("", {"lat":25.4,"lng":83})]:
             with self.subTest(start=start, end=end), \
                  patch.object(backend.db, "query", return_value=places), \
-                 patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: hotels if sql == "SELECT * FROM hotels" else []), \
-                 patch.object(backend.db, "save_trip", return_value=None):
+                 patch.object(backend.db, "safe_query", side_effect=lambda sql, *args: hotels if sql == "SELECT * FROM hotels" else []):
                 response = self.client.post("/api/trip", json=dict(payload, start=start, end=end))
                 self.assertEqual(response.status_code, 200, response.get_json())
                 result = response.get_json()
@@ -341,7 +358,7 @@ class IntegrationTests(unittest.TestCase):
         payload = dict(days=2, hours_per_day=8, budget=10000, start=paid["place_name"], end=paid["place_name"],
                        selected_places=[r["place_id"] for r in rows], compulsory_places=[paid["place_id"]],
                        food_budget="standard", travel_pace="relaxed")
-        with patch.object(backend.db, "save_trip", return_value=None), patch("requests.get", side_effect=AssertionError("External network called")):
+        with patch("requests.get", side_effect=AssertionError("External network called")):
             response = self.client.post("/api/trip", json=payload)
             self.assertEqual(response.status_code, 200, response.get_json())
             result = response.get_json()
@@ -366,7 +383,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(backend.db.query("SELECT * FROM hotels ORDER BY hotel_id"), hotels_before)
         print(f"Live checks: {len(all_rows)} places, {len(regions)} regions, {len(mapped)} mapped images; places unchanged.")
         print("Image gaps:", [(r["place_id"], r["image_url"]) for r in all_rows if r not in mapped])
-        for table in ("hotels", "food_places", "travel_resources"):
+        for table in ("hotels", "food_places"):
             print(table, backend.db.query(f"SELECT COUNT(*) AS records FROM {table}"))
 
 

@@ -1,93 +1,111 @@
-# Temporary_Personalized_Travel_Planner
+# Ayan — Personalized Travel Planner
 
-## Run Ayan locally (Windows PowerShell)
+A local Flask + MySQL application for planning visits in Varanasi and surrounding regions. The frontend is plain HTML, CSS and JavaScript served by Flask.
 
-The existing MySQL database is `personalized_travel_planner`. Keep its current
-`places` table and records. Do not execute the unfinished seed/query files.
-Flask now serves the existing frontend; no separate frontend server is required.
-
-Dependencies remain those in requirements.txt: Flask, flask-cors, requests,
-PyMySQL, cryptography and python-dotenv. No new dependency was added.
+## Run locally (Windows PowerShell)
 
 From the project directory:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -B app.py
 ```
 
-Keep the existing .env. For a new machine only, copy .env.example to .env if .env
-does not exist, then set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD and DB_NAME.
-Never publish .env. MySQL must be running and the existing project database
-must be present. A fresh database needs a separately reviewed data import;
-database/schema.sql is not a safe repeatable migration.
+For a new machine, copy `.env.example` to `.env` only if `.env` does not already exist. Configure `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME`. The database name used by the project is `personalized_travel_planner`. Keep `.env` private.
 
-The reviewed food-tier migration has already been applied on this machine.
-For another copy of the same database, this guarded command adds only the
-missing column and checks that places is unchanged:
+MySQL must be running with the project data imported. Open [Ayan locally](http://127.0.0.1:5000/). Use this host and port: several frontend pages hardcode the API address. No separate frontend server is required.
+
+Install requirements into the interpreter you actually use. During the latest check, system Python had the dependencies, but `.venv` could not import `requests`.
+
+## User flow
+
+1. Home → Destinations → Regions: select the destination and regions.
+2. Places: select attractions.
+3. Preferences: choose 1–30 days, a positive budget, food budget and pace; optionally select accommodation, starting/ending places and a travel date.
+4. Customize: mark compulsory stops or remove selections, then generate the itinerary.
+5. Plan: view scheduled stops, times, distance, exclusions and compulsory-stop conflicts. The separate Estimated Spend section shows transport, food, stay and total. Attraction entry fees are included in the total and identified separately in a note.
+6. Suggestions: view food options around lunch/dinner stops and hotel suggestions by day.
+
+To change a plan, return to Preferences or Customize, make the changes and generate again. There is no separate Recalculate button or saved-trip endpoint.
+
+The calendar disables dates before the browser's current local date and prevents navigation to earlier months. It expands within the preferences card so its dates are not clipped.
+
+Preferences and results use browser storage, not database trip records. **Current behavior: refreshing a page clears planning selections, preferences and results through `planning-state.js`.** Browser storage is not a saved-trip history or a cross-device account feature.
+
+## Planning and cost rules
+
+- The current preferences UI requests one traveler, an eight-hour day starting at 09:00, and own-vehicle transport.
+- Relaxed allows at most two stops/day; Balanced three; Packed has no count cap. Opening hours, visit/travel times and budget still limit stops.
+- Selected places may be excluded. Compulsory stops that cannot fit produce conflicts and suggestions; they are not guaranteed to fit.
+- Distances and travel times use an offline estimate (straight-line distance with a detour factor), not live traffic or verified road routing.
+- Larger searches return a best-found result rather than a guaranteed optimum.
+- Blank endpoints are chosen automatically from selected places. A blank end does **not** necessarily mean returning to the start.
+- Split opening hours are reduced to the longest opening session. Without a start date, weekday closures cannot be checked.
+- Total cost = entry fees + estimated fuel + food + accommodation.
+- Food uses two meals per visiting day at the average available price in the selected food tier. Accommodation uses the cheapest available price in the selected stay category, multiplied by `max(visiting_days - 1, 0)`. Empty itinerary days are not charged for food or stay.
+- Hotel/food suggestions are recommendations, not reservations. Fallback options may be farther away or in another tier and are labelled accordingly. Their individual prices need not equal the planning estimate.
+- Public-transport requests are rejected. The API accepts `mixed`, but currently plans it using own-vehicle estimates.
+
+## Database and files
+
+Runtime planning reads these tables:
+
+| Table | Purpose |
+| --- | --- |
+| `places` | Attractions, region/category, coordinates, opening hours, closures, visit duration, entry fee and image filename |
+| `food_places` | Restaurant coordinates, dietary information, price per person and `budget_tier` (`budget`, `standard`, `premium`) |
+| `hotels` | Hotel coordinates, category (`budget`, `normal`, `luxury`), nightly price, address and optional official booking URL |
+
+Place images are served from `database/images/places/`. Store filenames in `places.image_url`, not Windows absolute paths. Basic/Comfort/Luxury in the UI map to hotel categories budget/normal/luxury.
+
+`travel_resources` is not used by the runtime and was absent in the database checked during this review. Older SQL reference files still mention it; they are not a reliable current migration set.
+
+`trips`, `trip_places` and `itinerary_items` are no longer read, written or created by the app's trip flow. For an existing database, run `database/remove_trip_storage.sql` manually to permanently remove their stored records. This deletion is not automatic.
+
+Flask startup does not run schema scripts. **Do not execute `database/schema_extra.sql` as a general setup script:** it contains legacy `ALTER TABLE` and `DROP TABLE` statements. Seed files are not guaranteed repeatable. A new database needs a reviewed import of the current data and schema.
+
+For an existing food table missing only `budget_tier`, the guarded migration is:
 
 ```powershell
 .\.venv\Scripts\python.exe -B database/apply_integration.py
 ```
 
-Start the application:
+This checks whether the column exists and verifies that places are unchanged. It is not a complete database installer.
 
-```powershell
-.\.venv\Scripts\python.exe -B app.py
-```
+## API
 
-Open http://127.0.0.1:5000/ in the browser. If that port already serves Ayan,
-reuse that server. Startup no longer automatically runs schema scripts.
-The system Python currently has the dependencies; `python -B app.py` also
-works in the inspected environment. The existing .venv lacked PyMySQL during
-inspection, so install requirements before using that environment.
+| Method and path | Purpose |
+| --- | --- |
+| `GET /api/health` | App health; does not prove database connectivity |
+| `GET /api/regions` | Region names and place counts |
+| `GET /api/places?region=NAME` | Attractions; repeat `region` to select several |
+| `GET /api/images/places/<filename>` | Attraction images |
+| `GET /api/data-quality` | Issues detected in stored attraction data |
+| `POST /api/trip` | Generate a fresh plan from the submitted preferences and selected places |
 
-## Data entry and supported behavior
-
-- places: unchanged. Existing image_url filenames are served from
-  database/images/places/. Matching files appear on Places; NULL or missing
-  files show an image slot. Do not enter full Windows paths in image_url.
-- hotels: keep category values budget, normal, luxury; enter hotel_name,
-  latitude, longitude, price_per_night and optional booking/address details.
-  The UI's Basic/Comfort/Luxury choices map to those existing category values.
-- food_places: enter name, coordinates, price_range_per_person and the new
-  budget_tier (budget, standard or premium). Dietary options remain a separate
-  existing field. Unclassified rows are not treated as a guessed price tier.
-- travel_resources: link place_id to an existing place and enter
-  requirement_type, required_or_optional, procedure_text and official_url.
-  Resources returned with a trip belong to scheduled stops.
-- trips, trip_places and itinerary_items: used by existing trip persistence
-  and recalculation. Do not rename these tables or their fields.
-- Hotel and food suggestions rank located records by distance to the nearest
-  scheduled stop, returning up to five. This ranking does not guarantee a
-  particular maximum distance. Records need both coordinates to be ranked.
-- Empty hospitality tables mean no invented recommendations or costs.
-  Expenditure includes available entry fees and estimated fuel; food uses
-  two meals per day from matching priced records and hotels use days minus
-  one nights. Missing data is reported as warnings.
-- Start/end inputs use existing curated place names; blank end means return
-  to start. Railway-station data is not supplied, so it is not silently added.
-- Preferences supports 1–30 days. Relaxed caps at two stops/day, Balanced at
-  three, Packed has no stop-count cap. Time, opening hours and budget may
-  permit fewer stops. No guaranteed minimum number of stops.
-- The supplied Preferences design is preserved. It currently uses one
-  traveler, an eight-hour day from 09:00, and own-vehicle fuel estimates.
-- Routes use the existing offline distance/time estimator. No geocoding,
-  OSRM or map service is called by trip generation. The supplied font link
-  in Preferences remains unchanged.
+Trip generation returns its result directly and does not write trip records to MySQL.
 
 ## Verification
 
 ```powershell
 python -B tests/test_integration.py
 python -B tests/test_integration.py --live
+node --test tests/frontend-preferences.test.cjs
 ```
 
-The live test reads MySQL and disables trip persistence during its requests.
-It verifies region unions, image responses, itinerary costs, compulsory stops,
-pace exclusions, unknown-location errors, no external routing requests and an
-unchanged places fingerprint. Normal browser-generated trips are saved.
+Use an interpreter with requirements installed. Node.js is needed for JavaScript checks. `--live` performs read-only MySQL checks and API planning requests; it verifies that places, food and hotel records remain unchanged.
 
-See INTEGRATION_REPORT.md for the actual execution results and remaining data
-limitations. No pending SQL in database/testqueries.sql, database/schema.sql,
-database/schema_extra.sql or schema_extra.sql was executed.
+On 2026-11-16, all 19 backend tests (including live checks) and four frontend tests passed. The live database contained 52 places across seven regions, 36 hotels and 36 food places. All 52 place images were present. Additional API probes covered 25 normal/boundary/malformed-input cases; they also exposed the issues below. Browser visual and interaction testing was not performed in this review, so these results do not establish exhaustive end-to-end coverage.
+
+## Known limitations and cleanup candidates
+
+- API validation allows past dates even though the calendar blocks them.
+- Fractional and boolean place IDs are converted to integers. An infinite ID produces HTTP 500 instead of a validation error.
+- Missing food/hotel price data can produce a zero estimate without a warning. Zero does not necessarily mean free.
+- Normalization issues and routing/optimization warnings are not consistently surfaced on the Plan page.
+- Refresh resets the planning flow; blocked or malformed browser storage is not handled consistently across every page.
+- Hardcoded localhost URLs need changing before hosting elsewhere.
+- Unused backend imports (`re`, `timedelta`, `requests`) and `_geocode_cache`, the unused `database.init_db()` setup helper, and legacy schema files are cleanup candidates. Optional OSRM helpers are unused by the current API but could support a future routing feature.
+
+See `REVIEW_NOTES.md` for the latest review findings. `INTEGRATION_REPORT.md` describes an earlier project state and should not be treated as the current feature specification.

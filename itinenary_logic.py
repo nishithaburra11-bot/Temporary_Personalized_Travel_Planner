@@ -517,7 +517,8 @@ class Planner:
     def plan_score(self, routes, sims):
         ids = {pid for route in routes for pid in route}
         return (len(ids.intersection(self.compulsory)), len(ids),
-                round(self.trip_cost(sims), 2), -sum(sim["km"] for sim in sims))
+                round(self.trip_cost(sims), 2), -sum(sim["km"] for sim in sims),
+                tuple(len(route) for route in routes))
 
     def exact_search_fits(self):
         size = len(self.places)
@@ -584,13 +585,15 @@ class Planner:
             if not candidates:
                 break
             ranked = sorted(candidates, key=lambda r: (
-                -candidates[r][0][0], candidates[r][0][2], -candidates[r][0][3], r))
+                -candidates[r][0][0], candidates[r][0][2], -candidates[r][0][3],
+                tuple(-len(route) for route in r), r))
             winner = max(candidates, key=lambda r: candidates[r][0])
             if candidates[winner][0] > self.plan_score(*best):
                 best = (winner, candidates[winner][1])
             if diversify:
                 early = sorted(candidates, key=lambda r: (
-                    sum(sim["end_time"] - self.start_min for sim in candidates[r][1]), r))
+                    sum(sim["end_time"] - self.start_min for sim in candidates[r][1]),
+                    tuple(-len(route) for route in r), r))
                 ranked = list(dict.fromkeys(ranked[:width // 2] + early[:width // 2] + ranked))
             frontier = [(r, candidates[r][1]) for r in ranked[:width]]
         return best

@@ -97,6 +97,17 @@ class IntegrationTests(unittest.TestCase):
                 self.assertEqual({stop["place_id"] for stop in stops}, {7, 8, 9})
                 self.assertEqual(result["cost_breakdown"]["total"], 600)
 
+    def test_equivalent_schedules_use_the_earliest_day(self):
+        places = [dict(place_id=i, latitude=25.3, longitude=83, entry_fee=0)
+                  for i in range(1, 5)]
+        trip = dict(days=8, hours_per_day=8, budget=500, start_coords=[25.3, 83],
+                    food_per_day=430, max_stops_per_day=2)
+        planner = backend.planner_module
+        with patch.object(planner.Planner, "exact_search_fits", return_value=False):
+            result = planner.generate_itinerary(trip, places)
+        self.assertEqual([len(day["stops"]) for day in result["itinerary_by_day"]],
+                         [2, 0, 0, 0, 0, 0, 0, 0])
+
     def test_nearest_suggestions(self):
         rows = [dict(name="far", latitude=26, longitude=83), dict(name="near", latitude=25.31, longitude=83), dict(name="unknown")]
         self.assertEqual(backend._near(rows, [(25.3, 83)])[0]["name"], "near")

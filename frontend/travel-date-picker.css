@@ -1,0 +1,15 @@
+.travel-date-picker { position: relative; width: min(100%, 320px); }
+.travel-date-picker input { width: 100%; box-sizing: border-box; }
+/* Keep the open calendar in flow so the ticket's decorative mask cannot clip it. */
+.travel-calendar { position: relative; width: 100%; margin-top: 8px; box-sizing: border-box; padding: 12px; background: #fffdf6; color: #3a2a12; border: 1px solid #c8922a; border-radius: 10px; box-shadow: 0 8px 24px #3a2a1226; }
+.travel-calendar[hidden] { display: none; }
+.calendar-heading, .calendar-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.calendar-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin: 12px 0; text-align: center; }
+.calendar-days span { font-size: .75rem; color: #6b3a06; }
+.travel-calendar button { font: inherit; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #6b3a06; padding: 7px 3px; cursor: pointer; }
+.calendar-heading button, .calendar-actions button { padding: 7px 12px; }
+.travel-calendar button:hover:not(:disabled) { background: #f4edcf; }
+.travel-calendar button:disabled { opacity: .35; cursor: not-allowed; }
+.travel-calendar button[aria-pressed="true"] { background: #6b3a06; color: white; }
+.travel-calendar button[aria-current="date"] { border-color: #c8922a; }
+.travel-calendar button:focus-visible, #startDate:focus-visible { outline: 2px solid #6b3a06; outline-offset: 2px; }

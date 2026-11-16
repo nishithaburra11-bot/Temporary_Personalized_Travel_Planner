@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="travel-date-picker.css">
     <script src="script.js" defer></script>
 
     <style>
@@ -863,7 +864,18 @@
                     <select id="endLoc" autocomplete="off" style="width:100%;padding:12px;font:inherit;"><option value="">Choose a place (optional — automatic)</option></select>
 
                     <label class="lab" for="startDate">Travel start date (optional)</label>
-                    <input id="startDate" type="date" style="padding:12px;font:inherit;">
+                    <div class="travel-date-picker" id="travelDatePicker">
+                        <input id="startDate" type="text" readonly placeholder="YYYY-MM-DD" aria-haspopup="dialog" aria-expanded="false" aria-controls="travelCalendar" style="padding:12px;font:inherit;cursor:pointer;">
+                        <div id="travelCalendar" class="travel-calendar" role="dialog" aria-label="Choose travel start date" hidden>
+                            <div class="calendar-heading">
+                                <button id="previousMonth" type="button" aria-label="Previous month">&#8249;</button>
+                                <strong id="calendarMonth" aria-live="polite"></strong>
+                                <button id="nextMonth" type="button" aria-label="Next month">&#8250;</button>
+                            </div>
+                            <div id="calendarDays" class="calendar-days"></div>
+                            <div class="calendar-actions"><button id="calendarToday" type="button">Today</button><button id="calendarClear" type="button">Clear</button></div>
+                        </div>
+                    </div>
                     <p class="note">Choose stored locations or leave them blank for automatic itinerary endpoints. Planning uses an 8-hour day starting at 09:00, for one traveler.</p>
                 </div>
             </div>
@@ -938,6 +950,7 @@
         </aside>
     </main>
 
+    <script src="travel-date-picker.js"></script>
     <script>
         // ---- connection settings (change here if your backend differs) ----
         const API = "http://127.0.0.1:5000";
@@ -1134,6 +1147,11 @@
             err.hidden = true;
 
             if (!Object.keys(readPlaces()).length || !(state.budget > 0) || state.days < 1 || !state.food || !state.pace) return;
+            if ($("startDate").value && $("startDate").value < window.travelDatePicker.today()) {
+                err.textContent = "Choose today or a future travel date.";
+                err.hidden = false;
+                return;
+            }
             const start = $("startLoc").value.trim();
             const end = $("endLoc").value.trim();
             const prefs = {
@@ -1160,7 +1178,7 @@
                 const prefs = JSON.parse(localStorage.getItem("trip_preferences") || "{}");
                 $("startLoc").value = "";
                 $("endLoc").value = "";
-                $("startDate").value = prefs.start_date || "";
+                window.travelDatePicker.setValue(prefs.start_date);
                 const res = await fetch(API + "/api/places");
                 const data = await res.json();
                 if (!res.ok || !Array.isArray(data.places)) throw new Error(data.error || "Unable to load places.");

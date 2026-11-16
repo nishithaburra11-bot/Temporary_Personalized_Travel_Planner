@@ -1,25 +1,53 @@
-.regions {
-    background-image: url(img_home.png);
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    background-position: center;
-    background-size: cover;
+.home {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    background: #086479;
     font-family: 'Montserrat', sans-serif;
+}
+
+.home-hero {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+}
+
+.home-hero-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
 }
 
 .get-started {
     display: inline-block;
     text-decoration: none;
     position: absolute;
-    top: 62%;
-    left: 44.3%;
+    top: 64%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
     padding: 15px 35px;
-    background-color: #ff9900;
-    color: white;
+    background-color: #e0a93f;
+    color: #172f38;
     border: none;
     border-radius: 15px;
     font-size: 18px;
     cursor: pointer;
+}
+
+.get-started:hover {
+    background-color: #ffb52e;
+}
+
+.get-started:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 4px;
 }
 
 #menu {

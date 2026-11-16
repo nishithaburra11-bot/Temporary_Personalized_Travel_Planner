@@ -19,6 +19,8 @@ const heading = document.getElementById("destName");
 select.addEventListener("change", () => {
   const destination = destinations[select.value];
   info.classList.toggle("hidden", !destination);
+  document.getElementById("destinationWelcome").hidden = Boolean(destination);
+  document.body.classList.toggle("choosing-destination", !destination);
   heading.textContent = destination ? destination.name : "Choose a destination";
   try {
     if (destination) localStorage.setItem("selectedDestination", select.value);

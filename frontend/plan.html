@@ -42,7 +42,7 @@
             padding: 20px 24px;
             margin-bottom: 24px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 16px;
             box-shadow: 0 4px 12px rgba(107, 58, 6, .08);
         }
@@ -50,6 +50,17 @@
         .summary-stat {
             display: flex;
             flex-direction: column;
+        }
+
+        .spend-card { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .spend-title, .spend-note { grid-column: 1 / -1; }
+        .spend-title { font-size: 1.2rem; color: var(--brown); }
+        .spend-note { color: #7a6a4a; font-size: .9rem; }
+        @media (max-width: 600px) {
+            .summary-card { padding: 16px; gap: 12px; }
+            .stat-val { font-size: 1.1rem; overflow-wrap: anywhere; }
+            .stat-label { font-size: .72rem; }
+            .spend-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         .stat-label {
@@ -243,6 +254,7 @@
 
             <!-- Stats -->
             <div class="summary-card" id="summaryCard"></div>
+            <section class="summary-card spend-card" id="spendCard" aria-labelledby="spendTitle"></section>
             <div id="tripNotices" class="alert-box" hidden></div>
 
 
@@ -348,7 +360,8 @@
 
             // 1. Stats
             const totalStops = (data.itinerary_by_day || []).reduce((acc, d) => acc + (d.stops || []).length, 0);
-            const estCost = data.cost_breakdown ? data.cost_breakdown.total : 0;
+            const costs = data.cost_breakdown || {};
+            const money = value => "₹" + Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
             const totalKm = data.total_distance_km || 0;
 
             summary.innerHTML = `
@@ -361,13 +374,18 @@
                     <span class="stat-val">${totalStops} Attractions</span>
                 </div>
                 <div class="summary-stat">
-                    <span class="stat-label">Estimated Spend</span>
-                    <span class="stat-val">₹${Math.round(estCost || 0)}</span>
-                </div>
-                <div class="summary-stat">
                     <span class="stat-label">Total Distance</span>
                     <span class="stat-val">${totalKm ? totalKm + " km" : "Optimized"}</span>
                 </div>
+            `;
+
+            document.getElementById("spendCard").innerHTML = `
+                <h2 class="spend-title" id="spendTitle">Estimated Spend</h2>
+                <div class="summary-stat"><span class="stat-label">Transport</span><span class="stat-val">${money(costs.fuel?.amount)}</span></div>
+                <div class="summary-stat"><span class="stat-label">Food</span><span class="stat-val">${money(costs.food?.amount)}</span></div>
+                <div class="summary-stat"><span class="stat-label">Stay</span><span class="stat-val">${money(costs.accommodation?.amount)}</span></div>
+                <div class="summary-stat"><span class="stat-label">Total Estimated Spend</span><span class="stat-val">${money(costs.total)}</span></div>
+                ${costs.entry_fees?.amount ? `<p class="spend-note">Total also includes ${money(costs.entry_fees.amount)} in attraction entry fees.</p>` : ""}
             `;
 
             const notices = document.getElementById("tripNotices");

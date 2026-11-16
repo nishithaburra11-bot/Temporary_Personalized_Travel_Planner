@@ -12,7 +12,6 @@ Endpoints
   GET  /api/data-quality                  problems found in the places data
   POST /api/trip                          generate a trip
   POST /api/trip/recalculate              FULL regeneration ({trip_id, add_compulsory|compulsory_places} or a full payload)
-  GET  /api/resources?place_ids=1,2
 """
 import json
 import math
@@ -428,9 +427,6 @@ def plan_trip(params):
     response["hotel_suggestions"] = _near(hotels, sched_pts)
     response["hotel_suggestions_by_day"] = hotel_suggestions_by_day(
         response["itinerary_by_day"], hotels_every_tier, params["stay_preference"])
-    response["resources"] = [r for r in db.safe_query(
-        f"SELECT r.*, p.place_name FROM travel_resources r JOIN places p ON p.place_id = r.place_id "
-        f"WHERE r.place_id IN ({marks})", ids) if r["place_id"] in sched_ids]
     try:
         response["trip_id"] = db.save_trip(params, response["itinerary_by_day"], set(params["compulsory_ids"]), ids)
     except Exception:
@@ -505,20 +501,6 @@ def data_quality():
     for r in db.query("SELECT * FROM places ORDER BY place_id"):
         out += normalize_place_row(r)[1]
     return jsonify({"success": True, "issue_count": len(out), "issues": out})
-
-
-@app.get("/api/resources")
-def resources():
-    raw = request.args.get("place_ids", "").strip()
-    sql = "SELECT r.*, p.place_name FROM travel_resources r JOIN places p ON p.place_id = r.place_id"
-    args = []
-    if raw:
-        if not re.fullmatch(r"\d+(,\d+)*", raw):
-            raise ApiError("'place_ids' must be comma-separated integers.")
-        ids = [int(x) for x in raw.split(",")]
-        sql += f" WHERE r.place_id IN ({','.join(['%s'] * len(ids))})"
-        args = ids
-    return jsonify({"success": True, "resources": db.safe_query(sql, args)})
 
 
 @app.post("/api/trip")

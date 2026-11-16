@@ -5,7 +5,7 @@
     <script src="planning-state.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayan | Trip Suggestions & Resources</title>
+    <title>Ayan | Trip Suggestions</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
     <style>
@@ -159,6 +159,24 @@
         .more-results { grid-column: 1 / -1; }
         .more-results > summary { cursor: pointer; color: var(--brown); font: inherit; padding: 12px; }
         .more-results .cards-grid { margin-top: 12px; }
+        .activities { margin-bottom: 42px; }
+        .activities h2 { font-size: 2rem; color: var(--brown); margin-bottom: 8px; }
+        .activities-intro { color: #5a4a30; margin-bottom: 20px; line-height: 1.5; }
+        .activity-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+        .activity-card { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--card); color: var(--brown); font: inherit; cursor: zoom-in; box-shadow: 0 4px 12px rgba(107,58,6,.09); transition: transform .18s, box-shadow .18s; }
+        .activity-card img { display: block; width: 100%; height: 190px; object-fit: cover; }
+        .activity-card span { display: flex; min-height: 66px; align-items: center; justify-content: center; padding: 12px 8px; font-weight: bold; line-height: 1.3; }
+        .activity-card:hover { transform: translateY(-4px); box-shadow: 0 8px 18px rgba(107,58,6,.16); }
+        .activity-card:focus-visible, #activityClose:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+        #activityViewer { margin: auto; width: fit-content; max-width: 94vw; max-height: 94vh; padding: 16px; border: 2px solid var(--gold); border-radius: 16px; background: var(--card); color: var(--brown); }
+        #activityViewer::backdrop { background: rgba(0,0,0,.75); }
+        .activity-viewer-head { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 12px; }
+        #activityTitle { font-size: 1.25rem; }
+        #activityClose { padding: 8px 14px; border: 1px solid var(--gold); border-radius: 8px; color: var(--brown); background: var(--card); font: inherit; cursor: pointer; }
+        #activityFullImage { display: block; width: auto; height: auto; max-width: 86vw; max-height: 76vh; margin: auto; border-radius: 8px; }
+        @media (max-width: 800px) { .activity-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 500px) { .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .activity-card img { height: 170px; } }
+        @media (prefers-reduced-motion: reduce) { .activity-card { transition: none; } }
     </style>
 </head>
 
@@ -171,8 +189,34 @@
     </header>
 
     <main>
-        <h1>Suggestions & Travel Resources</h1>
-        <p class="sub">Handpicked accommodations, authentic local eateries, and key entry protocols for your planned visit.</p>
+        <section class="activities" aria-labelledby="activitiesTitle">
+            <h2 id="activitiesTitle">Things to do</h2>
+            <p class="activities-intro">A little more of Varanasi to explore. Click a photo for a closer look.</p>
+            <div class="activity-grid">
+                <button type="button" class="activity-card" aria-label="Enlarge Boating &amp; Cruising photo">
+                    <img src="images/activities/boating-cruising.png" alt="Boating &amp; Cruising" loading="lazy">
+                    <span>Boating &amp; Cruising</span>
+                </button>
+                <button type="button" class="activity-card" aria-label="Enlarge Explore Local Markets photo">
+                    <img src="images/activities/local-markets.png" alt="Explore Local Markets" loading="lazy">
+                    <span>Explore Local Markets</span>
+                </button>
+                <button type="button" class="activity-card" aria-label="Enlarge Ghat Walk photo">
+                    <img src="images/activities/ghat-walk.png" alt="Ghat Walk" loading="lazy">
+                    <span>Ghat Walk</span>
+                </button>
+                <button type="button" class="activity-card" aria-label="Enlarge Subah-e-Banaras photo">
+                    <img src="images/activities/subah-e-banaras.png" alt="Subah-e-Banaras" loading="lazy">
+                    <span>Subah-e-Banaras</span>
+                </button>
+                <button type="button" class="activity-card" aria-label="Enlarge Ganga Aarti photo">
+                    <img src="images/activities/ganga-aarti.png" alt="Ganga Aarti" loading="lazy">
+                    <span>Ganga Aarti</span>
+                </button>
+            </div>
+        </section>
+        <h1>Suggestions</h1>
+        <p class="sub">Handpicked accommodations and authentic local eateries for your planned visit.</p>
 
         <!-- Hotels -->
         <h2 class="section-title">🏨 Recommended Stays</h2>
@@ -186,19 +230,20 @@
             <div class="empty-placeholder">No local dining recommendations recorded yet.</div>
         </div>
 
-        <!-- Travel Resources -->
-        <h2 class="section-title">📜 Travel Protocols & Guidelines</h2>
-        <div id="resourcesGrid" class="cards-grid">
-            <div class="empty-placeholder">No special permits or registrations required for these attractions.</div>
-        </div>
-
         <div class="bottom-actions">
             <a href="plan.html" class="back-btn">&larr; Back to Itinerary</a>
-            <button onclick="window.print()" class="next-btn" style="background: #2f8f3f;">Print / Save Plan</button>
             <a href="destinations.html" class="next-btn">Plan Another Trip &rarr;</a>
         </div>
     </main>
 
+    <dialog id="activityViewer" aria-labelledby="activityTitle">
+        <div class="activity-viewer-head">
+            <h2 id="activityTitle"></h2>
+            <button type="button" id="activityClose">Close &times;</button>
+        </div>
+        <img id="activityFullImage" alt="">
+    </dialog>
+    <script src="activities.js" defer></script>
     <script>
         let tripData = {};
         try {
@@ -207,7 +252,6 @@
 
         const hotelsGrid = document.getElementById("hotelsGrid");
         const foodGrid = document.getElementById("foodGrid");
-        const resGrid = document.getElementById("resourcesGrid");
 
         // 1. Hotels: reuse the existing grid, cards and optional booking links.
         const escapeHotel = value => String(value ?? '').replace(/[&<>"']/g,
@@ -289,23 +333,6 @@
                 foodCard(f, f.budget_tier || 'Local Specialties', null)));
         }
 
-        // 3. Resources
-        const resources = tripData.resources || [];
-        if (resources.length > 0) {
-            resGrid.innerHTML = resources.map(r => `
-                <div class="card" style="border-left-color: #2563eb;">
-                    <div>
-                        <span class="card-tag" style="background: #dbeafe; color: #1e40af;">${r.requirement_type || 'Guidelines'}</span>
-                        <h3>${r.place_name || 'Attraction Protocol'}</h3>
-                        <p>${r.procedure_text || 'Standard visitor regulations apply.'}</p>
-                    </div>
-                    <div class="card-footer">
-                        <span>${r.required_or_optional ? r.required_or_optional.toUpperCase() : 'INFO'}</span>
-                        ${r.official_url ? `<a href="${r.official_url}" target="_blank" class="action-link">Official Portal &rarr;</a>` : ''}
-                    </div>
-                </div>
-            `).join("");
-        }
     </script>
 </body>
 
